@@ -2,6 +2,8 @@ import subprocess
 from typing import Tuple
 
 def run_git_operation(repo_path: str, operation: str) -> Tuple[bool, str, str]:
+  cmd = ["git", operation]
+
   if operation == "pull":
     cmd = ["git", "pull", "--ff-only"]
 

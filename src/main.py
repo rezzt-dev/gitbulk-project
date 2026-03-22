@@ -15,6 +15,7 @@ from view import (
 from model import find_git_repos, run_git_operation
 
 def main():
+  os.system("")
   config = load_config()
   default_dir = config.get("last_directory", os.getcwd())
 
