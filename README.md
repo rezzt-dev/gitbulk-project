@@ -10,6 +10,10 @@ en lugar de ir carpeta por carpeta ejecutando comandos, **GitBulk** busca recurs
 ```powershell
 iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1" | iex
 ```
+#### Linux
+```bash
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.sh" | sh
+```
 
 ---
 ### Caracteristicas Principales
