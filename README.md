@@ -5,6 +5,13 @@ una herramienta profesional de linea de comandos (CLI) escrita en Python para ge
 en lugar de ir carpeta por carpeta ejecutando comandos, **GitBulk** busca recursivamente todos los repositorios en una ruta especifica y ejecuta operaciones (`fetch` o `pull`) en paralelo, reduciendo drasticamente el tiempo de espera.
 
 ---
+### Instalacion del Proyecto
+#### Windows 10/11
+```powershell
+iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1" | iex
+```
+
+---
 ### Caracteristicas Principales
  - **Ejecuccion Concurrente:** utiliza multiples hilos (`ThreadPoolExecutor`) para procesar varios repositorios al mismo tiempo.
  - **Memoria de Sesion (Persistencia):** recuerda automaticamente el ultimo directorio analizado para que no tengas que escribir la ruta cada vez.
