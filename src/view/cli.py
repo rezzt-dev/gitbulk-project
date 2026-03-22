@@ -58,19 +58,30 @@ def show_start_processing(count: int, operation: str) -> None:
   """muestra cuantos repositorios se van a procesar."""
   print(f"encontrados {C_YELLOW}{count}{C_RESET} repositorios Git. ejecutando '{operation}' en paralelo...\n")
 
-def show_result(success: bool, repo_path: str, output: str) -> None:
+def show_result(status: str, repo_path: str, output: str) -> None:
   """muestra el resultado individual de un respositorio."""
   repo_name = os.path.basename(repo_path)
 
-  if success:
+  if status == "OK":
     print(f"[{C_GREEN}OK{C_RESET}] {C_CYAN}{repo_name}{C_RESET}")
+  elif status == "AUTH":
+    print(f"[{C_YELLOW}AUTH{C_RESET}] {C_CYAN}{repo_name}{C_RESET} (Requiere credenciales)")
   else:
     print(f"[{C_RED}ERROR{C_RESET}] {C_CYAN}{repo_name}{C_RESET}")
   
-  if output:
+  if output and status != "AUTH":
      # indentamos la salida para que sea mas facil de leer.
     indented_output = output.replace("\n", "\n    ")
     print(f"    {indented_output}")
+
+def show_auth_fallback(count: int) -> None:
+  """informa al usuario que hay repositorios que requieren credenciales y se procesaran secuencialmente."""
+  print(f"\n{C_YELLOW}{count}{C_RESET} repositorios requieren credenciales.")
+  print(f"procesando secuencialmente para permitir la entrada manual...\n")
+
+def show_auth_fallback_start(repo_path: str) -> None:
+  repo_name = os.path.basename(repo_path)
+  print(f"{C_CYAN}--- Autenticando {repo_name} ---{C_RESET}")
 
 def show_summary(successes: int, errors: int) -> None:
   """muestra el resumen final de la ejecuccion."""

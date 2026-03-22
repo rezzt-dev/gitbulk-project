@@ -10,6 +10,8 @@ from view import (
     show_no_repos_found,
     show_start_processing,
     show_result,
+    show_auth_fallback,
+    show_auth_fallback_start,
     show_summary
 )
 from model import find_git_repos, run_git_operation
@@ -34,23 +36,38 @@ def main():
 
   successes = 0
   errors = 0
+  repos_needing_auth = []
 
   with ThreadPoolExecutor(max_workers=args.workers) as executor:
     future_to_repo = {
-      executor.submit(run_git_operation, repo, args.operation): repo 
+      executor.submit(run_git_operation, repo, args.operation, False): repo 
       for repo in repos
     }
   
     for future in as_completed(future_to_repo):
-      success, repo_path, output = future.result()
+      status, repo_path, output = future.result()
 
-      if success:
+      if status == "OK":
         successes += 1
+      elif status == "AUTH":
+        repos_needing_auth.append(repo_path)
       else:
         errors += 1
       
-      show_result(success, repo_path, output)
+      show_result(status, repo_path, output)
   
+  if repos_needing_auth:
+    show_auth_fallback(len(repos_needing_auth))
+    for repo_path in repos_needing_auth:
+      show_auth_fallback_start(repo_path)
+      # Ejecucion secuencial permitiendo prompts interactivos
+      status, _, output = run_git_operation(repo_path, args.operation, allow_prompt=True)
+      if status == "OK":
+        successes += 1
+      else:
+        errors += 1
+      show_result(status, repo_path, output)
+
   show_summary(successes, errors)
 
 
