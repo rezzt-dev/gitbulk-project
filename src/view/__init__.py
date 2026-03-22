@@ -9,6 +9,8 @@ from .cli import (
   show_no_repos_found,
   show_start_processing,
   show_result,
+  show_auth_fallback,
+  show_auth_fallback_start,
   show_summary
 )
 
@@ -18,5 +20,7 @@ __all__ = [
   "show_no_repos_found",
   "show_start_processing",
   "show_result",
+  "show_auth_fallback",
+  "show_auth_fallback_start",
   "show_summary"
 ]
