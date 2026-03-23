@@ -201,7 +201,7 @@
  [],
  False,
  False,
- 1774256530,
+ 1774258101,
  [('run',
    '/home/rezzt/.local/share/pipx/venvs/pyinstaller/lib/python3.14/site-packages/PyInstaller/bootloader/Linux-64bit-intel/run',
    'EXECUTABLE')],

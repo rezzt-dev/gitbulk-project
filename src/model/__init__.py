@@ -5,7 +5,7 @@ de comandos Git, sin interactuar con la terminal ni el usuario.
 """
 
 from .scanner import find_git_repos
-from .git_ops import find_git_repos, run_git_operation
+from .git_ops import run_git_operation
 from .auth import setup_global_git_credentials
 
 __all__ = [
