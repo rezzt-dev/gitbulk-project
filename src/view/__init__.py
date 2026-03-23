@@ -13,7 +13,9 @@ from .cli import (
   show_auth_fallback_start,
   show_summary,
   prompt_for_credentials,
-  show_auth_success
+  show_auth_success,
+  show_branches_compact,
+  console
 )
 
 __all__ = [
@@ -26,5 +28,7 @@ __all__ = [
   "show_auth_fallback_start",
   "show_summary",
   "prompt_for_credentials",
-  "show_auth_success"
+  "show_auth_success",
+  "show_branches_compact",
+  "console"
 ]

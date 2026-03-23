@@ -1,0 +1,87 @@
+[
+    {
+        "path": "projects-repositories/easystories-projects/easy-stories",
+        "url": "https://github.com/rezzt-dev/easy-stories.git",
+        "branch": "main"
+    },
+    {
+        "path": "webpage-projects/refood-landing",
+        "url": "https://github.com/rezzt-dev/refood-landing.git",
+        "branch": "main"
+    },
+    {
+        "path": "webpage-projects/modz-webpage",
+        "url": "https://github.com/rezzt-dev/modz-webpage.git",
+        "branch": "main"
+    },
+    {
+        "path": "projects-repositories/kadro-projects/kadro-app",
+        "url": "https://github.com/rezzt-dev/kadro-app.git",
+        "branch": "main"
+    },
+    {
+        "path": "projects-repositories/easystories-projects/easystories-project",
+        "url": "https://github.com/rezzt-dev/easystories-project.git",
+        "branch": "main"
+    },
+    {
+        "path": "projects-repositories/kadro-projects/kadro-webpage",
+        "url": "https://github.com/rezzt-dev/kadro-webpage.git",
+        "branch": "main"
+    },
+    {
+        "path": "desktop-projects/gitbulk-project",
+        "url": "https://github.com/rezzt-dev/gitbulk-project.git",
+        "branch": "main"
+    },
+    {
+        "path": "my-web",
+        "url": "https://github.com/rezzt-dev/my-web.git",
+        "branch": "main"
+    },
+    {
+        "path": "desktop-projects/let-me-download",
+        "url": "https://github.com/rezzt-dev/let-me-download.git",
+        "branch": "main"
+    },
+    {
+        "path": "desktop-projects/python-projects",
+        "url": "https://github.com/rezzt-dev/python-projects.git",
+        "branch": "main"
+    },
+    {
+        "path": "projects-webpages/fluxed-webpage",
+        "url": "https://github.com/rezzt-dev/fluxed-webpage.git",
+        "branch": "main"
+    },
+    {
+        "path": "projects-webpages/quork-page",
+        "url": "https://github.com/rezzt-dev/quork-page.git",
+        "branch": "main"
+    },
+    {
+        "path": "projects-webpages/polar-project-webpage",
+        "url": "https://github.com/rezzt-dev/polar-project-webpage.git",
+        "branch": "main"
+    },
+    {
+        "path": "projects-webpages/ourmeal-webpage",
+        "url": "https://github.com/rezzt-dev/ourmeal-webpage.git",
+        "branch": "main"
+    },
+    {
+        "path": "android-projects/ourmeal-app",
+        "url": "https://github.com/rezzt-dev/ourmeal-app.git",
+        "branch": "main"
+    },
+    {
+        "path": "android-projects/polar-tasks",
+        "url": "https://github.com/rezzt-dev/polar-tasks.git",
+        "branch": "version-1.4"
+    },
+    {
+        "path": "android-projects/rootine-app",
+        "url": "https://github.com/rezzt-dev/rootine-app.git",
+        "branch": "main"
+    }
+]

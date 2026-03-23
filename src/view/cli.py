@@ -2,13 +2,12 @@ import argparse
 import os
 import getpass
 from typing import Tuple
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.tree import Tree
 
- # codigo ANSI para colores basicos en la terminal
-C_RESET = "\033[0m"
-C_GREEN = "\033[1;32m"
-C_RED = "\033[1;31m"
-C_CYAN = "\033[1;36m"
-C_YELLOW = "\033[1;33m"
+console = Console()
 
 def parse_arguments(default_dir: str) -> argparse.Namespace:
   """
@@ -27,8 +26,8 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
 
   parser.add_argument(
     "operation",
-    choices = ["fetch", "pull", "auth", "status"],
-    help = "la operacion de Git a ejecutar, 'auth' para credenciales, o 'status' para verificar estado."
+    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch"],
+    help = "la operacion de Git a ejecutar, 'auth' para credenciales, 'status', 'export', 'restore' o 'current-branch'."
   )
 
   parser.add_argument(
@@ -50,72 +49,123 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
     help = "archivo opcional para guardar los resultados de la ejecucion."
   )
 
+  parser.add_argument(
+    "--autostash",
+    action = "store_true",
+    help = "usa git stash pre y post pull para evitar conflictos por archivos modificados locales."
+  )
+
+  parser.add_argument(
+    "-f", "--file",
+    type = str,
+    default = "snapshot.json",
+    help = "archivo json para guardar/cargar la lista de repositorios."
+  )
+
   return parser.parse_args()
 
 def prompt_for_credentials() -> Tuple[str, str]:
   """Pide al usuario sus credenciales de GitHub de forma segura."""
-  print(f"\n{C_CYAN}--- Configuración de Credenciales de GitHub ---{C_RESET}")
-  print(f"{C_YELLOW}Nota: Se recomienda usar un Personal Access Token (PAT) en lugar de la contraseña.{C_RESET}")
-  username = input(f"Usuario de GitHub: ")
-  token = getpass.getpass(f"Contraseña o Token: ")
+  console.print(f"\n[bold cyan]--- Configuración de Credenciales de GitHub ---[/bold cyan]")
+  console.print(f"[bold yellow]Nota: Se recomienda usar un Personal Access Token (PAT) en lugar de la contraseña.[/bold yellow]")
+  username = input("Usuario de GitHub: ")
+  token = getpass.getpass("Contraseña o Token: ")
   return username, token
 
 def show_auth_success(username: str) -> None:
-  print(f"\n[{C_GREEN}OK{C_RESET}] Credenciales para {C_CYAN}{username}{C_RESET} guardadas globalmente con éxito.")
+  console.print(f"\n[bold green]OK[/bold green] Credenciales para [cyan]{username}[/cyan] guardadas globalmente con éxito.")
 
 def show_welcome(root_dir: str, operation: str) -> None:
   """muestra el mensaje de inicio del programa."""
-  print(f"\n{C_CYAN}buscando repositorios en:{C_RESET} {root_dir}")
-  print(f"{C_CYAN}operacion seleccionada:{C_RESET} {operation.upper()}\n")
+  welcome_msg = f"[bold cyan]Directorio raíz:[/bold cyan] {root_dir}\n[bold cyan]Operación:[/bold cyan] [bold white]{operation.upper()}[/bold white]"
+  console.print(Panel(welcome_msg, title="[bold cyan]GitBulk Manager[/bold cyan]", border_style="blue", expand=False))
 
 def show_no_repos_found(root_dir: str) -> None:
   """muestra un mensaje cuando no se encuentran repositorios."""
-  print(f"{C_RED}no se encontro ningun repositorio Git en {root_dir}{C_RESET}")
+  console.print(f"[bold red]No se encontro ningun repositorio Git en {root_dir}[/bold red]")
 
 def show_start_processing(count: int, operation: str) -> None:
   """muestra cuantos repositorios se van a procesar."""
-  print(f"encontrados {C_YELLOW}{count}{C_RESET} repositorios Git. ejecutando '{operation}' en paralelo...\n")
+  console.print(f"\n[dim]Encontrados [bold yellow]{count}[/bold yellow] repositorios Git. Ejecutando '{operation}' en paralelo...[/dim]\n")
 
-def show_result(status: str, repo_path: str, output: str) -> None:
+def show_result(status: str, detail: str, repo_path: str, output: str) -> None:
   """muestra el resultado individual de un respositorio."""
   repo_name = os.path.basename(repo_path)
+  detail_str = f" [dim]({detail})[/dim]" if detail else ""
 
   if status == "OK":
-    print(f"[{C_GREEN}OK{C_RESET}] {C_CYAN}{repo_name}{C_RESET}")
+    console.print(f"[bold green][OK][/bold green] [cyan]{repo_name}[/cyan]")
   elif status == "CLEAN":
-    print(f"[{C_GREEN}CLEAN{C_RESET}] {C_CYAN}{repo_name}{C_RESET}")
+    console.print(f"[bold green][CLEAN][/bold green] [cyan]{repo_name}[/cyan]")
   elif status == "MODIFIED":
-    print(f"[{C_YELLOW}MODIFIED{C_RESET}] {C_CYAN}{repo_name}{C_RESET}")
+    console.print(f"[bold yellow][MODIFIED][/bold yellow]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "AHEAD":
-    print(f"[{C_GREEN}AHEAD{C_RESET}] {C_CYAN}{repo_name}{C_RESET}")
+    console.print(f"[bold green][AHEAD][/bold green]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "BEHIND":
-    print(f"[{C_YELLOW}BEHIND{C_RESET}] {C_CYAN}{repo_name}{C_RESET}")
+    console.print(f"[bold yellow][BEHIND][/bold yellow]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "CONFLICT":
+    console.print(f"[bold yellow][CONFLICT][/bold yellow]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "DIVERGENT":
+    console.print(f"[bold red][DIVERGENT][/bold red]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "AUTH":
-    print(f"[{C_YELLOW}AUTH{C_RESET}] {C_CYAN}{repo_name}{C_RESET} (Requiere credenciales)")
+    console.print(f"[bold yellow][AUTH][/bold yellow] [cyan]{repo_name}[/cyan] [dim](Requiere credenciales)[/dim]")
   else:
-    print(f"[{C_RED}ERROR{C_RESET}] {C_CYAN}{repo_name}{C_RESET}")
+    console.print(f"[bold red][ERROR][/bold red] [cyan]{repo_name}[/cyan]")
   
-  if output and status != "AUTH" and status != "CLEAN":
+  if output and status not in ("AUTH", "CLEAN"):
      # indentamos la salida para que sea mas facil de leer.
     indented_output = output.replace("\n", "\n    ")
-    print(f"    {indented_output}")
+    console.print(f"    [dim]{indented_output}[/dim]")
 
 def show_auth_fallback(count: int) -> None:
   """informa al usuario que hay repositorios que requieren credenciales y se procesaran secuencialmente."""
-  print(f"\n{C_YELLOW}{count}{C_RESET} repositorios requieren credenciales.")
-  print(f"procesando secuencialmente para permitir la entrada manual...\n")
+  console.print(f"\n[bold yellow]{count}[/bold yellow] repositorios requieren credenciales.")
+  console.print("[dim]Procesando secuencialmente para permitir la entrada manual...[/dim]\n")
 
 def show_auth_fallback_start(repo_path: str) -> None:
   repo_name = os.path.basename(repo_path)
-  print(f"{C_CYAN}--- Autenticando {repo_name} ---{C_RESET}")
+  console.print(f"[bold cyan]Autenticando {repo_name} ...[/bold cyan]")
 
 def show_summary(counts: dict) -> None:
   """muestra el resumen final de la ejecuccion."""
-  print("-" * 40)
-  print(f"proceso finalizado.")
-  if counts.get('OK', 0) > 0: print(f"   exitos: {C_GREEN}{counts['OK']}{C_RESET}")
-  if counts.get('CLEAN', 0) > 0: print(f"   al dia: {C_GREEN}{counts['CLEAN']}{C_RESET}")
-  if counts.get('MODIFIED', 0) > 0: print(f"   con cambios locales: {C_YELLOW}{counts['MODIFIED']}{C_RESET}")
-  if counts.get('AHEAD', 0) > 0: print(f"   adelante del remoto: {C_GREEN}{counts['AHEAD']}{C_RESET}")
-  if counts.get('BEHIND', 0) > 0: print(f"   atrasado del remoto: {C_YELLOW}{counts['BEHIND']}{C_RESET}")
-  if counts.get('ERROR', 0) > 0: print(f"   errores: {C_RED}{counts['ERROR']}{C_RESET}")
+  table = Table(title="[bold magenta]Resumen Final de Ejecución[/bold magenta]", show_header=True, header_style="bold magenta")
+  table.add_column("Estado", style="dim")
+  table.add_column("Cantidad", justify="right")
+
+  if counts.get('OK', 0) > 0: table.add_row("[bold green]Éxitos[/bold green]", str(counts['OK']))
+  if counts.get('CLEAN', 0) > 0: table.add_row("[bold green]Al día[/bold green]", str(counts['CLEAN']))
+  if counts.get('MODIFIED', 0) > 0: table.add_row("[bold yellow]Modificados[/bold yellow]", str(counts['MODIFIED']))
+  if counts.get('AHEAD', 0) > 0: table.add_row("[bold green]Adelantados[/bold green]", str(counts['AHEAD']))
+  if counts.get('BEHIND', 0) > 0: table.add_row("[bold yellow]Atrasados[/bold yellow]", str(counts['BEHIND']))
+  if counts.get('CONFLICT', 0) > 0: table.add_row("[bold yellow]Conflictos[/bold yellow]", str(counts['CONFLICT']))
+  if counts.get('DIVERGENT', 0) > 0: table.add_row("[bold red]Requieren Merge[/bold red]", str(counts['DIVERGENT']))
+  if counts.get('ERROR', 0) > 0: table.add_row("[bold red]Errores[/bold red]", str(counts['ERROR']))
+
+  console.print("\n")
+  console.print(table)
+
+def show_branches_compact(results: list) -> None:
+  """muestra una vista ultracompacta de exactamente 1 linea por repositorio."""
+  console.print("\n[bold magenta]Topografía de Ramas[/bold magenta]")
+  
+  if not results: return
+  
+  max_len = max(len(repo_name) for repo_name, _ in results)
+  
+  for repo_name, branches_data in results:
+      active = branches_data.get("current") or "N/A"
+      local = branches_data.get("local", [])
+      remote = branches_data.get("remote_only", [])
+      
+      line = f"[bold cyan]{repo_name.ljust(max_len)}[/bold cyan]   [bold green]({active})[/bold green]"
+      
+      extras = []
+      if local:
+          extras.append(f"[cyan]L: {', '.join(local)}[/cyan]")
+      if remote:
+          extras.append(f"[dim yellow]R: {', '.join(remote)}[/dim yellow]")
+          
+      if extras:
+          line += "   " + "   ".join(extras)
+          
+      console.print(line)
