@@ -24,6 +24,7 @@ from view import show_branches_compact
 
 def main():
   os.system("")
+  os.system("cls" if os.name == "nt" else "clear")
   config = load_config()
   default_dir = config.get("last_directory", os.getcwd())
 
