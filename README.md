@@ -42,30 +42,40 @@ git_manager_pro/
 
 ---
 ### Uso
-abre tu terminal, situate en la carpeta raiz del proyecto (`gitbulk`) y ejecuta el programa como un modulo de Python.
+Abre tu terminal, sitúate en la carpeta raíz del proyecto y ejecuta el programa como un script.
 
-#### Uso Basico
-ejecutar un `fetch` en el directorio actual (o en el utlimo que usaste):
+#### Operaciones Disponibles
+GitBulk soporta comandos masivos para simplificar tu flujo de trabajo de cientos de repositorios en 1 clic:
+| Comando          | Descripción                                                                                   |
+|------------------|-----------------------------------------------------------------------------------------------|
+| `fetch`          | Ejecuta rutinas de actualización de origen remoto sin forzar cambios a la historia local.     |
+| `pull`           | Descarga de red los cambios sin retraso bajo formato libre de conflictos *fast-forward only*. |
+| `status`         | Analiza cuántos commits adelantados, atrasados o archivos modificados hay sin revisar.        |
+| `current-branch` | Genera de forma super-compacta una vista topográfica del árbol de ramas locales vs remotas.   |
+| `export`         | Compila un diccionario en JSON (Snapshot) extrayendo las rutas remotas exactas locales.       |
+| `restore`        | Reconstruye carpetas y clona infraestructura de software masiva analizando su matriz remota.  |
+| `auth`           | Automatiza el guardado de PAT tokens (Tokens de Acceso) de forma segura.                      |
+
+#### Argumentos Extendidos
+| Flag / Bandera     | Atajo | Descripción                                                        | Predeterminado |
+|--------------------|-------|--------------------------------------------------------------------|----------------|
+| `--dir <Ruta>`     | `-d`  | Carpeta fundamental que desencadena el escáner del `main.py`.      | *(Última Ruta)*|
+| `--workers <N>`    | `-w`  | Define el límite de tareas ejecutadas en paralelo a la vez.        | `5`            |
+| `--autostash`      |  —    | Congela ramas momentáneamente antes de un pull con bloqueos extra. | `False`        |
+| `--log <Archivo>`  | `-l`  | Fuerza volcado físico de salida terminal (Git Outputs).            | *(Omita Vacio)*|
+| `--file <Archivo>` | `-f`  | Inyecta el archivo JSON fuente a comandos de Backup masivo.        | `snapshot.json`|
+
+#### Ejemplos
 ```bash
-python -m src.main fetch
-```
+# Sincroniza red a 12 hilos congelando temporalmente modificaciones para prevenir rechazo estricto "non-fast-forward"
+python -m src.main pull -d "/home/usuario/proyectos" -w 12 --autostash
 
-ejecuta un `pull` (con `ff-only`) en una ruta especifica:
-```bash
-python -m src.main pull --dir "C:\Mis\Repositorios"
-```
+# Visualiza topográficamente el workspace y todas sus ramas por defecto
+python -m src.main current-branch
 
-#### Argumentos Disponibles
-| Argumento   | Atajo | Descripcion                                                       | Valor por Defecto                     |
-| ----------- | ----- | ----------------------------------------------------------------- | ------------------------------------- |
-| `operation` | -     | **requerido**. la operacion de Git a ejecutar (`fetch` o `pull`). | -                                     |
-| `--dir`     | `-d`  | ruta raiz donde buscar repositorios.                              | ultima ruta usada / Directorio actual |
-| `--workers` | `-w`  | numero de hilos simultáneos para la descarga de red.              | `5`                                   |
-
-#### Argumentos Disponibles
-hacer `pull` en una ruta concreta usando 10 hilos simultaneamente para mayor velocidad:
-```bash
-python -m src.main pull -d "/home/usuario/proyectos" -w 10
+# Creación veloz y automática de toda la red local en otra computadora (Onboarding Instantáneo)
+python -m src.main export -f infraestructura_backend.json
+python -m src.main restore -f infraestructura_backend.json -w 20
 ```
 
 ---

@@ -3,7 +3,7 @@ write-host "instalando gitbulk cli..." -foregroundcolor cyan
 
  # definir rutas ->
 $targetfolder = "$env:userprofile\.gitbulk"
-$exe_url = "https://github.com/rezzt-dev/gitbulk-project/releases/download/v1.0/gitbulk.exe"
+$exe_url = "https://github.com/rezzt-dev/gitbulk-project/releases/download/v1.1.0/gitbulk-windows.exe"
 $exe_path = "$targetfolder\gitbulk.exe"
 
 
