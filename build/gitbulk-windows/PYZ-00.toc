@@ -1067,6 +1067,18 @@
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\Lib\\mimetypes.py',
    'PYMODULE'),
+  ('model',
+   'D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\model\\__init__.py',
+   'PYMODULE'),
+  ('model.auth',
+   'D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\model\\auth.py',
+   'PYMODULE'),
+  ('model.git_ops',
+   'D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\model\\git_ops.py',
+   'PYMODULE'),
+  ('model.scanner',
+   'D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\model\\scanner.py',
+   'PYMODULE'),
   ('multiprocessing',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\Lib\\multiprocessing\\__init__.py',
@@ -1613,6 +1625,12 @@
   ('pdb',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\Lib\\pdb.py',
+   'PYMODULE'),
+  ('persistence',
+   'D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\persistence\\__init__.py',
+   'PYMODULE'),
+  ('persistence.config_repo',
+   'D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\persistence\\config_repo.py',
    'PYMODULE'),
   ('pickle',
    'C:\\Program '
@@ -2953,6 +2971,9 @@
   ('rich.traceback',
    'C:\\Users\\rezzt\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\rich\\traceback.py',
    'PYMODULE'),
+  ('rich.tree',
+   'C:\\Users\\rezzt\\AppData\\Local\\Packages\\PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0\\LocalCache\\local-packages\\Python313\\site-packages\\rich\\tree.py',
+   'PYMODULE'),
   ('rlcompleter',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\Lib\\rlcompleter.py',
@@ -3115,6 +3136,12 @@
   ('urllib.response',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\Lib\\urllib\\response.py',
+   'PYMODULE'),
+  ('view',
+   'D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\view\\__init__.py',
+   'PYMODULE'),
+  ('view.cli',
+   'D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\view\\cli.py',
    'PYMODULE'),
   ('webbrowser',
    'C:\\Program '
