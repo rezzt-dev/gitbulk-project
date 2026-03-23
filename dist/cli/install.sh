@@ -14,7 +14,7 @@ else
 fi
 
  # definir rutas y url de tu release
-url="https://github.com/rezzt-dev/gitbulk-project/releases/download/v1.0/$binary_name"
+url="https://github.com/rezzt-dev/gitbulk-project/releases/download/v1.1.0/$binary_name"
 install_dir="$HOME/.local/bin"
 exe_path="$install_dir/gitbulk"
 
