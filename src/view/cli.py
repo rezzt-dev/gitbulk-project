@@ -107,6 +107,8 @@ def show_result(status: str, detail: str, repo_path: str, output: str) -> None:
     console.print(f"[bold yellow][CONFLICT][/bold yellow]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "DIVERGENT":
     console.print(f"[bold red][DIVERGENT][/bold red]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "FETCH_UPDATE":
+    console.print(f"[bold blue][UPDATES][/bold blue]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "AUTH":
     console.print(f"[bold yellow][AUTH][/bold yellow] [cyan]{repo_name}[/cyan] [dim](Requiere credenciales)[/dim]")
   else:
@@ -137,6 +139,7 @@ def show_summary(counts: dict) -> None:
   if counts.get('MODIFIED', 0) > 0: table.add_row("[bold yellow]Modificados[/bold yellow]", str(counts['MODIFIED']))
   if counts.get('AHEAD', 0) > 0: table.add_row("[bold green]Adelantados[/bold green]", str(counts['AHEAD']))
   if counts.get('BEHIND', 0) > 0: table.add_row("[bold yellow]Atrasados[/bold yellow]", str(counts['BEHIND']))
+  if counts.get('FETCH_UPDATE', 0) > 0: table.add_row("[bold blue]Pendientes de Pull[/bold blue]", str(counts['FETCH_UPDATE']))
   if counts.get('CONFLICT', 0) > 0: table.add_row("[bold yellow]Conflictos[/bold yellow]", str(counts['CONFLICT']))
   if counts.get('DIVERGENT', 0) > 0: table.add_row("[bold red]Requieren Merge[/bold red]", str(counts['DIVERGENT']))
   if counts.get('ERROR', 0) > 0: table.add_row("[bold red]Errores[/bold red]", str(counts['ERROR']))

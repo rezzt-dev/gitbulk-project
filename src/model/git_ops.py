@@ -55,6 +55,21 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
           else:
               return "CLEAN", "", repo_path, ""
               
+    if operation == "fetch":
+        status_res = subprocess.run(["git", "status", "--short", "--branch"], cwd=repo_path, env=env, capture_output=True, text=True)
+        if status_res.returncode == 0:
+            lines = status_res.stdout.strip().split("\n")
+            branch_info = lines[0] if lines else ""
+            
+            match = re.search(r'\[(.*?)\]', branch_info)
+            if match:
+                details = match.group(1)
+                m_behind = re.search(r'behind (\d+)', details)
+                if m_behind:
+                    behind = int(m_behind.group(1))
+                    return "FETCH_UPDATE", f"{behind} commits por bajar", repo_path, output
+        return "OK", "Al día", repo_path, output
+              
     return "OK", "", repo_path, output
 
   except subprocess.CalledProcessError as e:
