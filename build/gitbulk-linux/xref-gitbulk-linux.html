@@ -2165,6 +2165,7 @@ imported by:
     <a href="#_aix_support">_aix_support</a>
  &#8226;   <a href="#_ast_unparse">_ast_unparse</a>
  &#8226;   <a href="#_threading_local">_threading_local</a>
+ &#8226;   <a href="#getpass">getpass</a>
  &#8226;   <a href="#glob">glob</a>
  &#8226;   <a href="#importlib.metadata">importlib.metadata</a>
  &#8226;   <a href="#importlib.resources._adapters">importlib.resources._adapters</a>
@@ -5675,6 +5676,29 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="getpass"></a>
+  <a target="code" href="///usr/lib/python3.14/getpass.py" type="text/plain"><tt>getpass</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#contextlib">contextlib</a>
+ &#8226;   <a href="#io">io</a>
+ &#8226;   <a href="#msvcrt">msvcrt</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pwd">pwd</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#termios">termios</a>
+ &#8226;   <a href="#warnings">warnings</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#view.cli">view.cli</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="gettext"></a>
   <a target="code" href="///usr/lib/python3.14/gettext.py" type="text/plain"><tt>gettext</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -6501,6 +6525,7 @@ imported by:
  &#8226;   <a href="#email.parser">email.parser</a>
  &#8226;   <a href="#encodings.quopri_codec">encodings.quopri_codec</a>
  &#8226;   <a href="#encodings.uu_codec">encodings.uu_codec</a>
+ &#8226;   <a href="#getpass">getpass</a>
  &#8226;   <a href="#gzip">gzip</a>
  &#8226;   <a href="#http.client">http.client</a>
  &#8226;   <a href="#http.cookiejar">http.cookiejar</a>
@@ -6866,15 +6891,36 @@ imported by:
   <a target="code" href="///home/rezzt/repositorios/desktop-projects/gitbulk-project/src/model/__init__.py" type="text/plain"><tt>model</tt></a>
 <span class="moduletype">Package</span>  <div class="import">
 imports:
-    <a href="#model.git_ops">model.git_ops</a>
+    <a href="#model.auth">model.auth</a>
+ &#8226;   <a href="#model.git_ops">model.git_ops</a>
  &#8226;   <a href="#model.scanner">model.scanner</a>
 
   </div>
   <div class="import">
 imported by:
     <a href="#main.py">main.py</a>
+ &#8226;   <a href="#model.auth">model.auth</a>
  &#8226;   <a href="#model.git_ops">model.git_ops</a>
  &#8226;   <a href="#model.scanner">model.scanner</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="model.auth"></a>
+  <a target="code" href="///home/rezzt/repositorios/desktop-projects/gitbulk-project/src/model/auth.py" type="text/plain"><tt>model.auth</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#model">model</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#pathlib">pathlib</a>
+ &#8226;   <a href="#subprocess">subprocess</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#model">model</a>
 
   </div>
 
@@ -6922,7 +6968,8 @@ imported by:
   <a target="code" href="" type="text/plain"><tt>msvcrt</tt></a>
 <span class="moduletype">MissingModule</span>  <div class="import">
 imported by:
-    <a href="#multiprocessing.popen_spawn_win32">multiprocessing.popen_spawn_win32</a>
+    <a href="#getpass">getpass</a>
+ &#8226;   <a href="#multiprocessing.popen_spawn_win32">multiprocessing.popen_spawn_win32</a>
  &#8226;   <a href="#multiprocessing.spawn">multiprocessing.spawn</a>
  &#8226;   <a href="#subprocess">subprocess</a>
 
@@ -7897,6 +7944,7 @@ imported by:
  &#8226;   <a href="#functools">functools</a>
  &#8226;   <a href="#genericpath">genericpath</a>
  &#8226;   <a href="#getopt">getopt</a>
+ &#8226;   <a href="#getpass">getpass</a>
  &#8226;   <a href="#gettext">gettext</a>
  &#8226;   <a href="#glob">glob</a>
  &#8226;   <a href="#gzip">gzip</a>
@@ -7912,6 +7960,7 @@ imported by:
  &#8226;   <a href="#lzma">lzma</a>
  &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#mimetypes">mimetypes</a>
+ &#8226;   <a href="#model.auth">model.auth</a>
  &#8226;   <a href="#model.git_ops">model.git_ops</a>
  &#8226;   <a href="#model.scanner">model.scanner</a>
  &#8226;   <a href="#multiprocessing.connection">multiprocessing.connection</a>
@@ -8015,6 +8064,7 @@ imported by:
  &#8226;   <a href="#importlib.resources._common">importlib.resources._common</a>
  &#8226;   <a href="#importlib.resources.abc">importlib.resources.abc</a>
  &#8226;   <a href="#importlib.resources.readers">importlib.resources.readers</a>
+ &#8226;   <a href="#model.auth">model.auth</a>
  &#8226;   <a href="#pathlib._os">pathlib._os</a>
  &#8226;   <a href="#persistence.config_repo">persistence.config_repo</a>
  &#8226;   <a href="#zipfile._path">zipfile._path</a>
@@ -8214,7 +8264,8 @@ imported by:
   <a name="pwd"></a>
   <tt>pwd</tt> <span class="moduletype"><i>(builtin module)</i></span>  <div class="import">
 imported by:
-    <a href="#netrc">netrc</a>
+    <a href="#getpass">getpass</a>
+ &#8226;   <a href="#netrc">netrc</a>
  &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#posixpath">posixpath</a>
  &#8226;   <a href="#shutil">shutil</a>
@@ -8952,6 +9003,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#_aix_support">_aix_support</a>
+ &#8226;   <a href="#model.auth">model.auth</a>
  &#8226;   <a href="#model.git_ops">model.git_ops</a>
  &#8226;   <a href="#multiprocessing.popen_spawn_win32">multiprocessing.popen_spawn_win32</a>
  &#8226;   <a href="#multiprocessing.util">multiprocessing.util</a>
@@ -9003,6 +9055,7 @@ imported by:
  &#8226;   <a href="#fractions">fractions</a>
  &#8226;   <a href="#ftplib">ftplib</a>
  &#8226;   <a href="#getopt">getopt</a>
+ &#8226;   <a href="#getpass">getpass</a>
  &#8226;   <a href="#gettext">gettext</a>
  &#8226;   <a href="#glob">glob</a>
  &#8226;   <a href="#gzip">gzip</a>
@@ -9168,6 +9221,16 @@ imported by:
  &#8226;   <a href="#multiprocessing.util">multiprocessing.util</a>
  &#8226;   <a href="#urllib.request">urllib.request</a>
  &#8226;   <a href="#urllib.response">urllib.response</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="termios"></a>
+  <tt>termios</tt> <span class="moduletype"><tt>/usr/lib/python3.14/lib-dynload/termios.cpython-314-x86_64-linux-gnu.so</tt></span>  <div class="import">
+imported by:
+    <a href="#getpass">getpass</a>
 
   </div>
 
@@ -9648,6 +9711,7 @@ imported by:
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
     <a href="#argparse">argparse</a>
+ &#8226;   <a href="#getpass">getpass</a>
  &#8226;   <a href="#os">os</a>
  &#8226;   <a href="#typing">typing</a>
  &#8226;   <a href="#view">view</a>
@@ -9684,6 +9748,7 @@ imported by:
  &#8226;   <a href="#ctypes">ctypes</a>
  &#8226;   <a href="#ctypes._layout">ctypes._layout</a>
  &#8226;   <a href="#functools">functools</a>
+ &#8226;   <a href="#getpass">getpass</a>
  &#8226;   <a href="#gettext">gettext</a>
  &#8226;   <a href="#glob">glob</a>
  &#8226;   <a href="#gzip">gzip</a>

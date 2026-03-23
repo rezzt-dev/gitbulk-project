@@ -7,6 +7,8 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
 
   if operation == "pull":
     cmd = ["git", "pull", "--ff-only"]
+  elif operation == "status":
+    cmd = ["git", "status", "--short", "--branch"]
 
   env = os.environ.copy()
   if not allow_prompt:
@@ -22,7 +24,24 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
       capture_output = True,
       check = True
     )
-    return "OK", repo_path, result.stdout.strip()
+    
+    output = result.stdout.strip()
+    
+    if operation == "status":
+      lines = output.split("\n") if output else []
+      if len(lines) > 1:
+          # Hay archivos modificados o untracked
+          return "MODIFIED", repo_path, ""
+      else:
+          branch_info = lines[0] if lines else ""
+          if "ahead" in branch_info:
+              return "AHEAD", repo_path, branch_info
+          elif "behind" in branch_info:
+              return "BEHIND", repo_path, branch_info
+          else:
+              return "CLEAN", repo_path, ""
+              
+    return "OK", repo_path, output
 
   except subprocess.CalledProcessError as e:
     error_msg = e.stderr.strip() if e.stderr else str(e)
