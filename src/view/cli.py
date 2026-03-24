@@ -21,13 +21,27 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
   """
 
   parser = argparse.ArgumentParser(
-    description = "GitBulk: ejecuta comandos masivos en multiples repositorios."
+    description = (
+        "GitBulk: Ejecuta comandos masivos en múltiples repositorios Git concurrentemente.\n\n"
+        "Comandos disponibles:\n"
+        "  fetch          : Descarga el historial remoto sin fusionar (git fetch).\n"
+        "  pull           : Actualiza la rama actual con el remoto (git pull --ff-only).\n"
+        "  auth           : Configura tus credenciales globales (PAT) de GitHub.\n"
+        "  status         : Muestra el estado del árbol de trabajo (modificados, ahead/behind).\n"
+        "  export         : Exporta la lista de repositorios y su origen a un archivo JSON.\n"
+        "  restore        : Clona masivamente repositorios faltantes leyendo un JSON de exportación.\n"
+        "  current-branch : Muestra una topografía ultracompacta de ramas locales y remotas.\n"
+        "  clean          : [Destructivo] Elimina ramas remotas muertas y archivos no versionados.\n"
+        "  checkout       : Cambia el puntero HEAD iterativamente (-b rama_destino).\n"
+        "  ci-status      : Consulta a GitHub el estado de pruebas (Pipelines) mediante tu PAT configurado."
+    ),
+    formatter_class=argparse.RawTextHelpFormatter
   )
 
   parser.add_argument(
     "operation",
     choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch", "clean", "checkout", "ci-status"],
-    help = "la operacion de Git a ejecutar, 'auth' para credenciales, 'status', 'export', 'restore', 'current-branch', 'clean', 'checkout' o 'ci-status'."
+    help = "La operación principal de Git a iterar en el espacio de trabajo activo."
   )
 
   parser.add_argument(
