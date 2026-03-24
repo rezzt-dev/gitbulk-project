@@ -5,7 +5,7 @@ echo "Iniciando instalación de gitbulk CLI..."
 if ! command -v git &> /dev/null; then
     echo "error: No se ha encontrado 'git'. Por favor, instálalo antes de continuar."
     exit 1
-}
+fi
 
 PYTHON_CMD=""
 if command -v python3 &> /dev/null; then
@@ -23,7 +23,6 @@ EXE_PATH="$TARGET_FOLDER/gitbulk"
 SPEC_FILE="gitbulk.spec"
 TEMP_DIR="/tmp/gitbulk_src_$$"
 
-# Crear carpeta de destino si no existe
 mkdir -p "$TARGET_FOLDER"
 
 echo "Descargando todo el código fuente..."
@@ -38,7 +37,7 @@ cd "$TEMP_DIR" || exit 1
 echo "Creando entorno virtual (venv)..."
 $PYTHON_CMD -m venv venv
 if [ $? -ne 0 ]; then
-    echo "error: No se pudo crear el entorno virtual. Es posible que te falte el paquete python3-venv en tu sistema (ej. sudo apt install python3-venv)."
+    echo "error: No se pudo crear el entorno virtual. Es posible que te falte el paquete python3-venv en tu sistema."
     cd "$HOME" || exit 1
     rm -rf "$TEMP_DIR"
     exit 1
@@ -72,15 +71,14 @@ echo "Ok: Limpieza terminada e instalación exitosa."
 cd "$HOME" || exit 1
 rm -rf "$TEMP_DIR"
 
-# Configurar variables de entorno
 echo "Configurando variables de entorno..."
 
 if ! echo "$PATH" | grep -q "$TARGET_FOLDER"; then
     if [ -f "$HOME/.zshrc" ]; then
-        echo -e '\nexport PATH="'$TARGET_FOLDER':$PATH"' >> "$HOME/.zshrc"
+        echo -e '\nexport PATH="'"$TARGET_FOLDER"':$PATH"' >> "$HOME/.zshrc"
         echo "Ok: gitbulk añadido a ~/.zshrc."
     elif [ -f "$HOME/.bashrc" ]; then
-        echo -e '\nexport PATH="'$TARGET_FOLDER':$PATH"' >> "$HOME/.bashrc"
+        echo -e '\nexport PATH="'"$TARGET_FOLDER"':$PATH"' >> "$HOME/.bashrc"
         echo "Ok: gitbulk añadido a ~/.bashrc."
     fi
 else
