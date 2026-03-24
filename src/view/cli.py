@@ -208,10 +208,10 @@ def show_ci_compact(results: list) -> None:
       state = ci_data.get("state", "none")
       branch = ci_data.get("branch", "N/A")
       
-      if state == "success": st_text = "[bold green]✔ PASS[/bold green]"
-      elif state == "failure": st_text = "[bold red]✖ FAIL[/bold red]"
-      elif state == "pending": st_text = "[bold yellow]● PEND[/bold yellow]"
-      elif state == "none": st_text = "[dim white]- NONE[/dim white]"
+      if state == "success": st_text = "[bold green][PASS][/bold green]"
+      elif state == "failure": st_text = "[bold red][FAIL][/bold red]"
+      elif state == "pending": st_text = "[bold yellow][PEND][/bold yellow]"
+      elif state == "none": st_text = "[dim white][NONE][/dim white]"
       else: st_text = "[dim red]! ERR[/dim red]"
           
       table.add_row(st_text, repo_name, branch)
