@@ -1,179 +1,169 @@
-import subprocess
 import os
-import re
 from typing import Tuple
+from git import Repo, exc
+from .error_handler import parse_git_error
 
-def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False, autostash: bool = False) -> Tuple[str, str, str, str]:
-  cmd = ["git", operation]
-
-  if operation == "pull":
-    cmd = ["git", "pull", "--ff-only"]
-    if autostash:
-      cmd.append("--autostash")
-  elif operation == "status":
-    cmd = ["git", "status", "--short", "--branch"]
-
-  env = os.environ.copy()
-  if not allow_prompt:
-    # deshabilitar prompts interactivos de git para evitar bloqueos
-    env["GIT_TERMINAL_PROMPT"] = "0"
-
-  try:
-    result = subprocess.run(
-      cmd,
-      cwd = repo_path,
-      env = env,
-      text = True,
-      capture_output = True,
-      check = True
-    )
-    
-    output = result.stdout.strip()
-    
-    if operation == "status":
-      lines = output.split("\n") if output else []
-      if len(lines) > 1:
-          # Hay archivos modificados o untracked
-          modified_count = len([line for line in lines[1:] if line.strip()])
-          return "MODIFIED", str(modified_count), repo_path, ""
-      else:
-          branch_info = lines[0] if lines else ""
-          ahead, behind = 0, 0
-          
-          match = re.search(r'\[(.*?)\]', branch_info)
-          if match:
-              details = match.group(1)
-              m_ahead = re.search(r'ahead (\d+)', details)
-              if m_ahead: ahead = int(m_ahead.group(1))
-              m_behind = re.search(r'behind (\d+)', details)
-              if m_behind: behind = int(m_behind.group(1))
-
-          if ahead > 0:
-              return "AHEAD", str(ahead), repo_path, branch_info
-          elif behind > 0:
-              return "BEHIND", str(behind), repo_path, branch_info
-          else:
-              return "CLEAN", "", repo_path, ""
-              
-    if operation == "fetch":
-        status_res = subprocess.run(["git", "status", "--short", "--branch"], cwd=repo_path, env=env, capture_output=True, text=True)
-        if status_res.returncode == 0:
-            lines = status_res.stdout.strip().split("\n")
-            branch_info = lines[0] if lines else ""
+def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False, autostash: bool = False, target_branch: str = None) -> Tuple[str, str, str, str]:
+    try:
+        if not os.path.exists(os.path.join(repo_path, ".git")):
+            return "ERROR", "No es un directorio Git", repo_path, ""
             
-            match = re.search(r'\[(.*?)\]', branch_info)
-            if match:
-                details = match.group(1)
-                m_behind = re.search(r'behind (\d+)', details)
-                if m_behind:
-                    behind = int(m_behind.group(1))
-                    return "FETCH_UPDATE", f"{behind} commits por bajar", repo_path, output
-        return "OK", "Al día", repo_path, output
-              
-    return "OK", "", repo_path, output
+        repo = Repo(repo_path)
+        
+        if operation == "status":
+            is_dirty = repo.is_dirty(untracked_files=True)
+            if is_dirty:
+                modified_count = len(repo.untracked_files) + len([diff for diff in repo.index.diff(None)]) + len([diff for diff in repo.index.diff('HEAD')])
+                return "MODIFIED", str(modified_count), repo_path, ""
+            else:
+                try:
+                    active_branch = repo.active_branch
+                    tracking_branch = active_branch.tracking_branch()
+                    if tracking_branch:
+                        commits_behind = list(repo.iter_commits(f'{active_branch.name}..{tracking_branch.name}'))
+                        commits_ahead = list(repo.iter_commits(f'{tracking_branch.name}..{active_branch.name}'))
+                        if commits_ahead:
+                            return "AHEAD", str(len(commits_ahead)), repo_path, active_branch.name
+                        elif commits_behind:
+                            return "BEHIND", str(len(commits_behind)), repo_path, active_branch.name
+                    return "CLEAN", "", repo_path, ""
+                except TypeError:
+                    return "CLEAN", "Detached HEAD", repo_path, ""
+                except ValueError:
+                    return "CLEAN", "No commits yet", repo_path, ""
 
-  except subprocess.CalledProcessError as e:
-    error_msg = e.stderr.strip() if e.stderr else str(e)
-    # Check if the error is due to disabled terminal prompts
-    if not allow_prompt and ("could not read Username" in error_msg or "terminal prompts disabled" in error_msg or "Authentication failed" in error_msg):
-        return "AUTH", "", repo_path, error_msg
+        if operation == "fetch":
+            output = repo.git.fetch()
+            try:
+                active_branch = repo.active_branch
+                tracking_branch = active_branch.tracking_branch()
+                if tracking_branch:
+                    commits_behind = list(repo.iter_commits(f'{active_branch.name}..{tracking_branch.name}'))
+                    if commits_behind:
+                        return "FETCH_UPDATE", f"{len(commits_behind)} commits por bajar", repo_path, output
+            except Exception:
+                pass
+            return "OK", "Al día", repo_path, output
 
-    if operation == "pull":
-        if "overwritten by merge" in error_msg or "Please commit your changes or stash them" in error_msg:
-            return "CONFLICT", "Cambios locales", repo_path, error_msg
-        if "Not possible to fast-forward" in error_msg or "divergent branches" in error_msg or "Need to specify how to reconcile" in error_msg:
-            return "DIVERGENT", "Requiere merge manual", repo_path, error_msg
+        if operation == "clean":
+            output_prune = repo.git.fetch("--prune")
+            output_clean = repo.git.clean("-xfd")
+            return "CLEANED", "Limpieza agresiva finalizada", repo_path, f"{output_prune}\n{output_clean}".strip()
 
-    return "ERROR", "", repo_path, error_msg
+        if operation == "pull":
+            is_dirty = repo.is_dirty(untracked_files=True)
+            
+            if is_dirty and not autostash:
+                return "CONFLICT", "Cambios locales impiden actualizar", repo_path, "Confirma tus cambios o activa --autostash"
+                
+            args = ["--ff-only"]
+            if autostash:
+                args.append("--autostash")
+            output = repo.git.pull(*args)
+            
+            if is_dirty and autostash:
+                return "STASH_RESTORED", "Cambios sincronizados y auto-escondidos", repo_path, output
+                
+            return "OK", "", repo_path, output
+
+        if operation == "checkout":
+            if not target_branch:
+                return "ERROR", "Operación fallida", repo_path, "Falta especificar nombre de la rama destino pasándole el flag -b."
+            
+            try:
+                if not repo.head.is_detached and repo.active_branch.name == target_branch:
+                    return "CLEAN", "Ya en la rama de destino", repo_path, ""
+            except TypeError:
+                pass
+            
+            if target_branch in [h.name for h in repo.heads]:
+                repo.heads[target_branch].checkout()
+                return "CHECKOUT", "Movido a rama local", repo_path, ""
+            
+            if "origin" in repo.remotes:
+                origin = repo.remotes.origin
+                remote_ref = f"{origin.name}/{target_branch}"
+                refs = [r.name for r in origin.refs]
+                if remote_ref in refs:
+                    repo.create_head(target_branch, origin.refs[target_branch]).set_tracking_branch(origin.refs[target_branch]).checkout()
+                    return "CHECKOUT", "Rastreando rama remota descendente", repo_path, ""
+                    
+            return "IGNORED", "Rama inexistente virtual", repo_path, f"Omitiendo repo"
+
+        return "ERROR", "Operación no soportada", repo_path, ""
+
+    except exc.GitCommandError as e:
+        error_msg = parse_git_error(e)
+        if not allow_prompt and ("Error de Autenticación" in error_msg):
+            return "AUTH", "", repo_path, "Requiere configuración."
+
+        if operation == "pull":
+            if "Conflicto de Autostash" in error_msg:
+                return "STASH_CONFLICT", "Conflicto al restaurar stash", repo_path, error_msg
+            if "Conflicto de pull" in error_msg:
+                return "CONFLICT", "Cambios locales impiden actualizar", repo_path, error_msg
+            if "Ramas divergentes" in error_msg:
+                return "DIVERGENT", "Requiere merge manual", repo_path, error_msg
+                
+        return "ERROR", "Operación fallida", repo_path, error_msg
+    except Exception as e:
+        return "ERROR", "Error inesperado de motor", repo_path, str(e)
+
 
 def get_repo_metadata(repo_path: str) -> dict:
-  """Extrae la URL remota y la rama actual de un repositorio."""
-  metadata = {"url": "", "branch": ""}
-  
-  try:
-    url_res = subprocess.run(["git", "remote", "get-url", "origin"], cwd=repo_path, capture_output=True, text=True, check=True)
-    metadata["url"] = url_res.stdout.strip()
-  except subprocess.CalledProcessError:
-    pass
-
-  try:
-    branch_res = subprocess.run(["git", "branch", "--show-current"], cwd=repo_path, capture_output=True, text=True, check=True)
-    metadata["branch"] = branch_res.stdout.strip()
-  except subprocess.CalledProcessError:
-    pass
-    
-  return metadata
+    metadata = {"url": "", "branch": ""}
+    try:
+        repo = Repo(repo_path)
+        if repo.remotes:
+            metadata["url"] = list(repo.remotes[0].urls)[0]
+        if not repo.head.is_detached:
+            metadata["branch"] = repo.active_branch.name
+    except Exception:
+        pass
+    return metadata
 
 def clone_repo(target_dir: str, repo_info: dict) -> Tuple[str, str, str, str]:
-  """Clona un repositorio en target_dir y hace checkout a la rama especificada."""
-  url = repo_info.get("url")
-  branch = repo_info.get("branch")
-  
-  if not url:
-    return "ERROR", "Falta URL remota", target_dir, ""
+    url = repo_info.get("url")
+    branch = repo_info.get("branch")
     
-  try:
-    parent_dir = os.path.dirname(target_dir)
-    if not os.path.exists(parent_dir):
-        try:
-            os.makedirs(parent_dir, exist_ok=True)
-        except OSError:
-            pass # fallback to letting git clone fail natively
-
-    clone_res = subprocess.run(["git", "clone", url, target_dir], capture_output=True, text=True, check=True)
-    
-    if branch:
-      subprocess.run(["git", "checkout", branch], cwd=target_dir, capture_output=True, text=True, check=True)
-      
-    return "OK", branch, target_dir, clone_res.stdout.strip()
-  except subprocess.CalledProcessError as e:
-    error_msg = e.stderr.strip() if e.stderr else str(e)
-    if "already exists" in error_msg:
-        return "CLEAN", "Ya existe", target_dir, ""
-    return "ERROR", "", target_dir, error_msg
+    if not url:
+        return "ERROR", "Falta URL remota", target_dir, ""
+        
+    try:
+        parent_dir = os.path.dirname(target_dir)
+        if not os.path.exists(parent_dir):
+            try:
+                os.makedirs(parent_dir, exist_ok=True)
+            except OSError:
+                pass
+                
+        repo = Repo.clone_from(url, target_dir)
+        if branch:
+            repo.git.checkout(branch)
+            
+        return "OK", branch if branch else "default", target_dir, "Clonado exitosamente"
+        
+    except exc.GitCommandError as e:
+        error_msg = parse_git_error(e)
+        if "Conflicto de sistema" in error_msg:
+            return "CLEAN", "Ya existe", target_dir, ""
+        return "ERROR", "", target_dir, error_msg
+    except Exception as e:
+        return "ERROR", "Excepcion critica en clonacion", target_dir, str(e)
 
 def get_all_branches(repo_path: str) -> dict:
-  """
-  Retorna todas las ramas de un repositorio separadas en activa, locales y solo remotas.
-  """
-  data = {
-    "current": "",
-    "local": [],
-    "remote_only": []
-  }
-  
-  try:
-    res = subprocess.run(["git", "branch", "-a"], cwd=repo_path, capture_output=True, text=True, check=True)
-    lines = res.stdout.strip().split("\n")
-    
-    local_branches = set()
-    remote_branches = set()
-    
-    for line in lines:
-        line = line.strip()
-        if not line: continue
-        
-        if line.startswith("* "):
-            branch_name = line[2:].strip()
-            if branch_name.startswith("(HEAD detached at"):
-                branch_name = branch_name.replace("(HEAD detached at ", "").rstrip(")")
-            data["current"] = branch_name
-            local_branches.add(branch_name)
-        elif line.startswith("remotes/"):
-            if "->" in line: continue
-            branch_name = line.replace("remotes/", "", 1).strip()
-            remote_branches.add(branch_name)
-        else:
-            branch_name = line.strip()
-            local_branches.add(branch_name)
-            data["local"].append(branch_name)
-            
-    for rb in remote_branches:
-        short_name = rb.split("/", 1)[-1] if "/" in rb else rb
-        if short_name not in local_branches:
-            data["remote_only"].append(rb)
-
-  except subprocess.CalledProcessError:
-    pass
-    
-  return data
+    data = {"current": "", "local": [], "remote_only": []}
+    try:
+        repo = Repo(repo_path)
+        if not repo.head.is_detached:
+            data["current"] = repo.active_branch.name
+        data["local"] = [h.name for h in repo.heads]
+        if repo.remotes:
+            for r in repo.remotes:
+                for ref in r.refs:
+                    if ref.remote_head != 'HEAD':
+                        if ref.remote_head not in data["local"]:
+                            data["remote_only"].append(f"{r.name}/{ref.remote_head}")
+    except Exception:
+        pass
+    return data

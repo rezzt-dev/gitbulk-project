@@ -26,8 +26,8 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
 
   parser.add_argument(
     "operation",
-    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch"],
-    help = "la operacion de Git a ejecutar, 'auth' para credenciales, 'status', 'export', 'restore' o 'current-branch'."
+    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch", "clean", "checkout"],
+    help = "la operacion de Git a ejecutar, 'auth' para credenciales, 'status', 'export', 'restore', 'current-branch', 'clean' o 'checkout'."
   )
 
   parser.add_argument(
@@ -60,6 +60,12 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
     type = str,
     default = "snapshot.json",
     help = "archivo json para guardar/cargar la lista de repositorios."
+  )
+
+  parser.add_argument(
+    "-b", "--branch",
+    type = str,
+    help = "rama de destino (OBLIGATORIA para la operación 'checkout')."
   )
 
   return parser.parse_args()
@@ -109,6 +115,16 @@ def show_result(status: str, detail: str, repo_path: str, output: str) -> None:
     console.print(f"[bold red][DIVERGENT][/bold red]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "FETCH_UPDATE":
     console.print(f"[bold blue][UPDATES][/bold blue]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "STASH_RESTORED":
+    console.print(f"[bold blue][SYNC+STASH][/bold blue]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "STASH_CONFLICT":
+    console.print(f"[bold yellow][STASH CONFLICT][/bold yellow]{detail_str} [cyan]{repo_name}[/cyan]")  
+  elif status == "CLEANED":
+    console.print(f"[bold magenta][CLEANED][/bold magenta]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "CHECKOUT":
+    console.print(f"[bold cyan][CHECKOUT][/bold cyan]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "IGNORED":
+    console.print(f"[dim white][IGNORED][/dim white]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "AUTH":
     console.print(f"[bold yellow][AUTH][/bold yellow] [cyan]{repo_name}[/cyan] [dim](Requiere credenciales)[/dim]")
   else:
@@ -140,7 +156,12 @@ def show_summary(counts: dict) -> None:
   if counts.get('AHEAD', 0) > 0: table.add_row("[bold green]Adelantados[/bold green]", str(counts['AHEAD']))
   if counts.get('BEHIND', 0) > 0: table.add_row("[bold yellow]Atrasados[/bold yellow]", str(counts['BEHIND']))
   if counts.get('FETCH_UPDATE', 0) > 0: table.add_row("[bold blue]Pendientes de Pull[/bold blue]", str(counts['FETCH_UPDATE']))
-  if counts.get('CONFLICT', 0) > 0: table.add_row("[bold yellow]Conflictos[/bold yellow]", str(counts['CONFLICT']))
+  if counts.get('STASH_RESTORED', 0) > 0: table.add_row("[bold blue]Sincronizados (Autostash)[/bold blue]", str(counts['STASH_RESTORED']))
+  if counts.get('CLEANED', 0) > 0: table.add_row("[bold magenta]Limpiados / Pruned[/bold magenta]", str(counts['CLEANED']))
+  if counts.get('CHECKOUT', 0) > 0: table.add_row("[bold cyan]Cambiados (Checkout)[/bold cyan]", str(counts['CHECKOUT']))
+  if counts.get('IGNORED', 0) > 0: table.add_row("[dim white]Ignorados[/dim white]", str(counts['IGNORED']))
+  if counts.get('CONFLICT', 0) > 0: table.add_row("[bold yellow]Conflictos Locales[/bold yellow]", str(counts['CONFLICT']))
+  if counts.get('STASH_CONFLICT', 0) > 0: table.add_row("[bold yellow]Conflictos Autostash[/bold yellow]", str(counts['STASH_CONFLICT']))
   if counts.get('DIVERGENT', 0) > 0: table.add_row("[bold red]Requieren Merge[/bold red]", str(counts['DIVERGENT']))
   if counts.get('ERROR', 0) > 0: table.add_row("[bold red]Errores[/bold red]", str(counts['ERROR']))
 

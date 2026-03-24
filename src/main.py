@@ -42,6 +42,10 @@ def main():
   config["last_directory"] = target_dir
   save_config(config)
 
+  if args.operation == "checkout" and not getattr(args, 'branch', None):
+      console.print("\n[bold red]Error: La operación 'checkout' requiere obligatoriamente una rama destino pasándole el flag -b / --branch.[/bold red]")
+      sys.exit(1)
+
   log_file = None
   if args.log:
     log_file = open(args.log, "w", encoding="utf-8")
@@ -214,7 +218,7 @@ def main():
       task = progress.add_task(f"[bold cyan]Ejecutando {args.operation.upper()}...", total=len(repos))
       with ThreadPoolExecutor(max_workers=args.workers) as executor:
         future_to_repo = {
-          executor.submit(run_git_operation, repo, args.operation, False, getattr(args, 'autostash', False)): repo 
+          executor.submit(run_git_operation, repo, args.operation, False, getattr(args, 'autostash', False), getattr(args, 'branch', None)): repo 
           for repo in repos
         }
       
