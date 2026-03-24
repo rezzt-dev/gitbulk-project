@@ -43,14 +43,40 @@ def main():
   config["last_directory"] = target_dir
   save_config(config)
 
+  if getattr(args, 'workers', 5) <= 0:
+      console.print("\n[bold red]Error: El número de hilos concurrentes (-w) debe ser mayor a 0.[/bold red]")
+      sys.exit(1)
+
   if args.operation == "checkout" and not getattr(args, 'branch', None):
       console.print("\n[bold red]Error: La operación 'checkout' requiere obligatoriamente una rama destino pasándole el flag -b / --branch.[/bold red]")
       sys.exit(1)
 
+  if args.operation == "clean":
+      from rich.panel import Panel
+      console.print(Panel("[bold red]¡ADVERTENCIA DE SEGURIDAD![/bold red]\n"
+        "Esta operación ejecutará 'git fetch --prune' y 'git clean -xfd'.\n"
+        "Se eliminarán [bold]PERMANENTEMENTE[/bold] referencias a ramas remotas borradas y todo archivo local no versionado.\n"
+        "Asegúrate de no tener configuraciones locales urgentes o variables (.env) sin guardar.", 
+        border_style="red"
+      ))
+      
+      try:
+          from rich.prompt import Confirm
+          if not Confirm.ask("[bold yellow]¿Estás ABSOLUTAMENTE seguro de continuar en todos los repos?[/bold yellow]"):
+              console.print("[dim]Operación 'clean' masiva cancelada. Todo está a salvo.[/dim]")
+              sys.exit(0)
+      except (KeyboardInterrupt, EOFError):
+          console.print("\n[dim]Prompt de seguridad cancelado abrúptamente.[/dim]")
+          sys.exit(0)
+
   log_file = None
   if args.log:
-    log_file = open(args.log, "w", encoding="utf-8")
-    log_file.write(f"--- GitBulk Log: Operacion {args.operation.upper()} en {target_dir} ---\n\n")
+    try:
+        log_file = open(args.log, "w", encoding="utf-8")
+        log_file.write(f"--- GitBulk Log: Operacion {args.operation.upper()} en {target_dir} ---\n\n")
+    except OSError as e:
+        console.print(f"\n[bold red]Error Fatal: No se pudo crear o abrir el archivo de log en la ruta especificada:[/bold red]\n{e}")
+        sys.exit(1)
 
   try:
     show_welcome(target_dir, args.operation)
@@ -93,8 +119,12 @@ def main():
                    counts["OK"] += 1
                    progress.advance(task, 1)
 
-        with open(args.file, "w", encoding="utf-8") as f:
-            json.dump(snapshot, f, indent=4)
+        try:
+            with open(args.file, "w", encoding="utf-8") as f:
+                json.dump(snapshot, f, indent=4)
+        except OSError as e:
+            console.print(f"\n[bold red]Error Fatal: Imposible escribir el snapshot en la ruta exportada:[/bold red]\n{e}")
+            sys.exit(1)
             
         console.print(f"\n[bold green]OK[/bold green] Exportacion completada. {len(snapshot)} repositorios guardados en [cyan]{args.file}[/cyan].\n")
         show_summary(counts)
@@ -121,7 +151,10 @@ def main():
             try:
                 snapshot = json.load(f)
             except json.JSONDecodeError:
-                console.print(f"[bold red]El archivo {args.file} no es un JSON valido.[/bold red]")
+                console.print(f"[bold red]El archivo {args.file} no es un JSON valido o esta corrupto.[/bold red]")
+                sys.exit(1)
+            except OSError as e:
+                console.print(f"[bold red]Error del S.O extrayendo JSON:[/bold red] {e}")
                 sys.exit(1)
                 
         repos_to_clone = []
