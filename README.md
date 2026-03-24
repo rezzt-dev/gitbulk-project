@@ -1,7 +1,5 @@
 ## GitBulk Project
 
-## GitBulk Project
-
 Una herramienta profesional de línea de comandos (CLI) escrita en Python para gestionar y actualizar múltiples repositorios Git de forma masiva y concurrente.
 
 > **Documentación del Proyecto:** Consulta guías de instalación, arquitecturas y uso avanzado en el manual oficial: [Español (ES)](project-doc/es-project-doc.md) | [English (EN)](project-doc/en-project-doc.md).
