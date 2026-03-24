@@ -20,7 +20,7 @@ fi
 # 2. Configurar variables de directorios
 TARGET_FOLDER="$HOME/.local/bin"
 EXE_PATH="$TARGET_FOLDER/gitbulk"
-SPEC_FILE="gitbulk-linux.spec"
+SPEC_FILE="gitbulk.spec"
 TEMP_DIR="/tmp/gitbulk_src_$$"
 
 # Crear carpeta de destino si no existe
@@ -56,17 +56,12 @@ fi
 echo "Compilando el ejecutable localmente..."
 ./venv/bin/pyinstaller "$SPEC_FILE" --clean
 
-DIST_PATH="dist/gitbulk-linux/gitbulk-linux"
+DIST_PATH="dist/gitbulk"
 if [ ! -f "$DIST_PATH" ]; then
-    # Chequeo alternativo por si pyinstaller usó otro nombre
-    if [ -f "dist/gitbulk/gitbulk" ]; then
-        DIST_PATH="dist/gitbulk/gitbulk"
-    else
-        echo "error: Falló la compilación local."
-        cd "$HOME" || exit 1
-        rm -rf "$TEMP_DIR"
-        exit 1
-    fi
+    echo "error: Falló la compilación local. No se encontró $DIST_PATH."
+    cd "$HOME" || exit 1
+    rm -rf "$TEMP_DIR"
+    exit 1
 fi
 
 echo "Moviendo el ejecutable a la ruta final..."

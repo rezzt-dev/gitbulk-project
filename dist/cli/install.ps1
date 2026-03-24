@@ -22,8 +22,8 @@ if (Get-Command python3 -ErrorAction SilentlyContinue) {
 # 2. Configurar variables para Windows
 $targetFolder = "$env:USERPROFILE\.gitbulk"
 $exePath = "$targetFolder\gitbulk.exe"
-$specFile = "gitbulk-windows.spec"
-$distPath = "dist\gitbulk-windows\gitbulk-windows.exe"
+$specFile = "gitbulk.spec"
+$distPath = "dist\gitbulk.exe"
 $venvPython = "venv\Scripts\python.exe"
 $venvPip = "venv\Scripts\pip.exe"
 $venvPyinstaller = "venv\Scripts\pyinstaller.exe"
