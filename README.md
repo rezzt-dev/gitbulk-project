@@ -12,9 +12,9 @@ En lugar de ir carpeta por carpeta ejecutando comandos, **GitBulk** busca recurs
 ```powershell
 iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1" | iex
 ```
-#### Linux
+#### Linux / macOS
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.sh" | sh
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.sh" | bash
 ```
 
 ---
