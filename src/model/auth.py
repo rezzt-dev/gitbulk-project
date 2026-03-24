@@ -1,5 +1,6 @@
 import subprocess
 import os
+import urllib.parse
 from pathlib import Path
 
 def setup_global_git_credentials(username: str, token: str) -> bool:
@@ -51,3 +52,19 @@ def setup_global_git_credentials(username: str, token: str) -> bool:
   except Exception as e:
      print(f"Error guardando credenciales en ~/.git-credentials: {str(e)}")
      return False
+
+def get_github_token() -> str:
+    """Extrae sigilosamente el token (PAT) almacenado en las credenciales globales sin avisos."""
+    credentials_file = Path.home() / ".git-credentials"
+    if not credentials_file.exists(): 
+        return None
+        
+    try:
+        with open(credentials_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if "@github.com" in line:
+                    parsed = urllib.parse.urlparse(line.strip())
+                    return parsed.password
+    except Exception:
+        pass
+    return None

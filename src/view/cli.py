@@ -26,8 +26,8 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
 
   parser.add_argument(
     "operation",
-    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch", "clean", "checkout"],
-    help = "la operacion de Git a ejecutar, 'auth' para credenciales, 'status', 'export', 'restore', 'current-branch', 'clean' o 'checkout'."
+    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch", "clean", "checkout", "ci-status"],
+    help = "la operacion de Git a ejecutar, 'auth' para credenciales, 'status', 'export', 'restore', 'current-branch', 'clean', 'checkout' o 'ci-status'."
   )
 
   parser.add_argument(
@@ -193,3 +193,27 @@ def show_branches_compact(results: list) -> None:
           line += "   " + "   ".join(extras)
           
       console.print(line)
+
+def show_ci_compact(results: list) -> None:
+  """muestra una vista compacta de los status del CI."""
+  console.print("\n[bold magenta]Estado de Integración Continua (GitHub Actions)[/bold magenta]")
+  if not results: return
+  
+  table = Table(show_header=True, header_style="bold magenta", box=None)
+  table.add_column("Estado", justify="center")
+  table.add_column("Repositorio", style="cyan")
+  table.add_column("Rama Activa", style="dim")
+  
+  for repo_name, ci_data in results:
+      state = ci_data.get("state", "none")
+      branch = ci_data.get("branch", "N/A")
+      
+      if state == "success": st_text = "[bold green]✔ PASS[/bold green]"
+      elif state == "failure": st_text = "[bold red]✖ FAIL[/bold red]"
+      elif state == "pending": st_text = "[bold yellow]● PEND[/bold yellow]"
+      elif state == "none": st_text = "[dim white]- NONE[/dim white]"
+      else: st_text = "[dim red]! ERR[/dim red]"
+          
+      table.add_row(st_text, repo_name, branch)
+      
+  console.print(table)

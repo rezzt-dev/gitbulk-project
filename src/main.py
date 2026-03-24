@@ -17,10 +17,11 @@ from view import (
     show_summary,
     prompt_for_credentials,
     show_auth_success,
-    console
+    console,
+    show_branches_compact,
+    show_ci_compact
 )
-from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches
-from view import show_branches_compact
+from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches, get_github_token, get_ci_status
 
 def main():
   os.system("")
@@ -194,6 +195,50 @@ def main():
         show_branches_compact(results_queue)
         
         sys.exit(0)
+
+    if args.operation == "ci-status":
+        token = get_github_token()
+        if not token:
+            console.print("\n[bold red]Error: No se encontro un token de GitHub configurado.[/bold red]")
+            console.print("[yellow]Por favor, ejecuta 'python main.py auth' primero para guardar tus credenciales globales (PAT).[/yellow]\n")
+            sys.exit(1)
+            
+        repos = find_git_repos(target_dir)
+        if not repos:
+           show_no_repos_found(target_dir)
+           if log_file: log_file.write("No repositorios.\n")
+           sys.exit(0)
+           
+        show_start_processing(len(repos), "Consulta de Github Actions")
+        
+        results_queue = []
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TimeElapsedColumn(),
+            console=console,
+            transient=False
+        ) as progress:
+           task = progress.add_task(f"[bold cyan]Analizando pipelines...", total=len(repos))
+           with ThreadPoolExecutor(max_workers=args.workers) as executor:
+               future_to_repo = {
+                   executor.submit(get_ci_status, repo, token): repo for repo in repos
+               }
+               for future in as_completed(future_to_repo):
+                   repo_path = future_to_repo[future]
+                   ci_data = future.result()
+                   repo_name = os.path.basename(repo_path)
+                   results_queue.append((repo_name, ci_data))
+                   progress.advance(task, 1)
+
+        console.print("\n")
+        results_queue.sort(key=lambda x: x[0].lower())
+        show_ci_compact(results_queue)
+        
+        sys.exit(0)
+
 
     repos = find_git_repos(target_dir)
 

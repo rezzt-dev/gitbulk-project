@@ -15,6 +15,7 @@ from .cli import (
   prompt_for_credentials,
   show_auth_success,
   show_branches_compact,
+  show_ci_compact,
   console
 )
 
@@ -30,5 +31,6 @@ __all__ = [
   "prompt_for_credentials",
   "show_auth_success",
   "show_branches_compact",
+  "show_ci_compact",
   "console"
 ]
