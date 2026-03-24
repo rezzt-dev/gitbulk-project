@@ -5,31 +5,43 @@ echo "compilando e instalando gitbulk cli localmente..."
  # definir rutas
 install_dir="$HOME/.local/bin"
 exe_path="$install_dir/gitbulk"
+temp_dir="/tmp/gitbulk_src_$$"
 
  # crear la carpeta oculta para binarios del usuario si no existe
 mkdir -p "$install_dir"
 
- # compilar el binario localmente
-echo "iniciando proceso de compilacion local con build.sh..."
-chmod +x ../build/build.sh
-(cd ../build && ./build.sh)
+echo "clonando la ultima version desde internet..."
+git clone https://github.com/rezzt-dev/gitbulk-project.git "$temp_dir" || { echo "error: no se pudo clonar el repositorio."; exit 1; }
+
+echo "iniciando compilacion de dependencias..."
+cd "$temp_dir"
+pip3 install -r requirements.txt || pip install -r requirements.txt
+
+echo "empaquetando ejectuable..."
+pyinstaller gitbulk-linux.spec --clean
 
  # buscar el ejecutable generado
 local_bin=""
-if [ -f "../../dist/gitbulk-linux/gitbulk-linux" ]; then
-    local_bin="../../dist/gitbulk-linux/gitbulk-linux"
-elif [ -f "../../dist/gitbulk/gitbulk" ]; then
-    local_bin="../../dist/gitbulk/gitbulk"
+if [ -f "dist/gitbulk-linux/gitbulk-linux" ]; then
+    local_bin="dist/gitbulk-linux/gitbulk-linux"
+elif [ -f "dist/gitbulk/gitbulk" ]; then
+    local_bin="dist/gitbulk/gitbulk"
 fi
 
 if [ -z "$local_bin" ]; then
   echo "error: la compilacion local fallo."
+  cd "$HOME"
+  rm -rf "$temp_dir"
   exit 1
 fi
 
 echo "instalando el ejecutable generado..."
 cp "$local_bin" "$exe_path"
-echo "ok: archivo copiado exitosamente."
+chmod +x "$exe_path"
+echo "limpiando rastros temporales..."
+cd "$HOME"
+rm -rf "$temp_dir"
+echo "ok: archivo copiado e instalado exitosamente."
 
 
 chmod +x "$exe_path"

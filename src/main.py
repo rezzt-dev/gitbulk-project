@@ -3,8 +3,8 @@ import sys
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Workaround for PyInstaller to explicitly pack dependencies
-try:
+# Workaround for PyInstaller to explicitly pack dependencies (without try/except)
+def _pyinstaller_hooks():
     import rich
     import rich.console
     import rich.progress
@@ -14,8 +14,6 @@ try:
     import persistence
     import view
     import model
-except ImportError:
-    pass
 
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
 

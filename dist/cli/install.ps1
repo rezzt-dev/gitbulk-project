@@ -4,6 +4,7 @@ write-host "compilando e instalando gitbulk cli localmente..." -foregroundcolor 
  # definir rutas ->
 $targetfolder = "$env:userprofile\.gitbulk"
 $exe_path = "$targetfolder\gitbulk.exe"
+$temp_dir = "$env:temp\gitbulk_src_$(Get-Random)"
 
 
  # crear carpeta oculta en el perfil del usuario si no existe
@@ -11,18 +12,34 @@ if (-not (test-path -path $targetfolder)) {
   new-item -itemtype directory -path $targetfolder | out-null
 }
 
- # compilar el ejecutable localmente
-write-host "iniciando proceso de compilacion con build.bat..."
-& "..\build\build.bat"
-
-if (-not (test-path "..\..\dist\gitbulk-windows\gitbulk-windows.exe")) {
-    write-host "error: falló la compilación local." -foregroundcolor red
+write-host "descargando todo el codigo fuente..."
+git clone https://github.com/rezzt-dev/gitbulk-project.git $temp_dir
+if ($LASTEXITCODE -ne 0) {
+    write-host "error: falló la clonación del repositorio remoto." -foregroundcolor red
     exit
 }
 
-write-host "copiando el ejecutable generado..."
-copy-item -Path "..\..\dist\gitbulk-windows\gitbulk-windows.exe" -Destination $exe_path -Force
-write-host "ok: archivo instalado exitosamente." -foregroundcolor green
+Push-Location $temp_dir
+
+write-host "instalando entorno y dependencias..."
+pip install -r requirements.txt
+
+write-host "compilando el ejecutable localmente..."
+pyinstaller gitbulk-windows.spec --clean
+
+if (-not (test-path "dist\gitbulk-windows\gitbulk-windows.exe")) {
+    write-host "error: falló la compilación local." -foregroundcolor red
+    Pop-Location
+    Remove-Item -Recurse -Force $temp_dir
+    exit
+}
+
+write-host "moviendo el ejecutable a la ruta final..."
+copy-item -Path "dist\gitbulk-windows\gitbulk-windows.exe" -Destination $exe_path -Force
+write-host "ok: limpieza terminada e instalacion exitosa." -foregroundcolor green
+
+Pop-Location
+Remove-Item -Recurse -Force $temp_dir
 
  # agregar la carpeta al path de windows
 write-host "configurando variables de entorno..."
