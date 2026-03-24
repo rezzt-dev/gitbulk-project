@@ -1,34 +1,36 @@
 #!/bin/bash
 
-echo "instalando gitbulk cli..."
+echo "compilando e instalando gitbulk cli localmente..."
 
- # detectar el sistema operativo
-os=$(uname -s)
-if [ "$os" = "Linux" ]; then
-  binary_name="gitbulk-linux"
-elif [ "$os" = "Darwin" ]; then
-  binary_name="gitbulk-macos"
-else
-  echo "error: sistema operativo no soportado."
-  exit 1
-fi
-
- # definir rutas y url de tu release
-url="https://github.com/rezzt-dev/gitbulk-project/releases/download/v1.2.0/$binary_name"
+ # definir rutas
 install_dir="$HOME/.local/bin"
 exe_path="$install_dir/gitbulk"
 
  # crear la carpeta oculta para binarios del usuario si no existe
 mkdir -p "$install_dir"
 
- # descargar el binario correspondiente
-echo "descargando la version para $os desde github..."
-curl -fsSL "$url" -o "$exe_path"
+ # compilar el binario localmente
+echo "iniciando proceso de compilacion local con build.sh..."
+chmod +x ../build/build.sh
+(cd ../build && ./build.sh)
 
-if [ $? -ne 0 ]; then
-  echo "error al descargar el archivo. verifica que el release exita."
+ # buscar el ejecutable generado
+local_bin=""
+if [ -f "../../dist/gitbulk-linux/gitbulk-linux" ]; then
+    local_bin="../../dist/gitbulk-linux/gitbulk-linux"
+elif [ -f "../../dist/gitbulk/gitbulk" ]; then
+    local_bin="../../dist/gitbulk/gitbulk"
+fi
+
+if [ -z "$local_bin" ]; then
+  echo "error: la compilacion local fallo."
   exit 1
 fi
+
+echo "instalando el ejecutable generado..."
+cp "$local_bin" "$exe_path"
+echo "ok: archivo copiado exitosamente."
+
 
 chmod +x "$exe_path"
 

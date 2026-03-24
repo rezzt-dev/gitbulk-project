@@ -2,6 +2,21 @@ import os
 import sys
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# Workaround for PyInstaller to explicitly pack dependencies
+try:
+    import rich
+    import rich.console
+    import rich.progress
+    import rich.theme
+    import git
+    import git.exc
+    import persistence
+    import view
+    import model
+except ImportError:
+    pass
+
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TimeElapsedColumn
 
  # importamos nuestras capas limpiamente a traves de __init__.py

@@ -1,9 +1,8 @@
-$host.ui.rawui.windowtitle = "instalador de gitbulk"
-write-host "instalando gitbulk cli..." -foregroundcolor cyan
+ $host.ui.rawui.windowtitle = "instalador de gitbulk"
+write-host "compilando e instalando gitbulk cli localmente..." -foregroundcolor cyan
 
  # definir rutas ->
 $targetfolder = "$env:userprofile\.gitbulk"
-$exe_url = "https://github.com/rezzt-dev/gitbulk-project/releases/download/v1.2.0/gitbulk-windows.exe"
 $exe_path = "$targetfolder\gitbulk.exe"
 
 
@@ -12,17 +11,18 @@ if (-not (test-path -path $targetfolder)) {
   new-item -itemtype directory -path $targetfolder | out-null
 }
 
+ # compilar el ejecutable localmente
+write-host "iniciando proceso de compilacion con build.bat..."
+& "..\build\build.bat"
 
- # descargar el ejecutable desde github releases
-write-host "descargando gitbulk.exe desde github..."
-try {
-  invoke-webrequest -uri $exe_url -outfile $exe_path -usebasicparsing
-  write-host "ok: archivo descargado exitosamente." -foregroundcolor green
-} catch {
-  write-host "error: no se pudo descargar el archivo. verifica la url del release." -foregroundcolor red
-  exit
+if (-not (test-path "..\..\dist\gitbulk-windows\gitbulk-windows.exe")) {
+    write-host "error: falló la compilación local." -foregroundcolor red
+    exit
 }
 
+write-host "copiando el ejecutable generado..."
+copy-item -Path "..\..\dist\gitbulk-windows\gitbulk-windows.exe" -Destination $exe_path -Force
+write-host "ok: archivo instalado exitosamente." -foregroundcolor green
 
  # agregar la carpeta al path de windows
 write-host "configurando variables de entorno..."

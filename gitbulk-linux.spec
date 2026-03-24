@@ -1,12 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+import os
+import os
 
 a = Analysis(
     ['src/main.py'],
-    pathex=[],
+    pathex=[os.path.abspath('src')],
     binaries=[],
     datas=[],
-    hiddenimports=[],
+    hiddenimports=['rich', 'rich.console', 'rich.progress', 'rich.theme', 'git', 'git.exc'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
