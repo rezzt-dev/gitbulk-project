@@ -171,7 +171,9 @@ imports:
  &#8226;   <a href="#re._constants">re._constants</a>
  &#8226;   <a href="#re._parser">re._parser</a>
  &#8226;   <a href="#reprlib">reprlib</a>
+ &#8226;   <a href="#rich.panel">rich.panel</a>
  &#8226;   <a href="#rich.progress">rich.progress</a>
+ &#8226;   <a href="#rich.prompt">rich.prompt</a>
  &#8226;   <a href="#sre_compile">sre_compile</a>
  &#8226;   <a href="#sre_constants">sre_constants</a>
  &#8226;   <a href="#sre_parse">sre_parse</a>
@@ -9998,6 +10000,18 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="git"></a>
+  <a target="code" href="" type="text/plain"><tt>git</tt></a>
+<span class="moduletype">MissingModule</span>  <div class="import">
+imported by:
+    <a href="#model.error_handler">model.error_handler</a>
+ &#8226;   <a href="#model.git_ops">model.git_ops</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="glob"></a>
   <a target="code" href="///C:/Program%20Files/WindowsApps/PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0/Lib/glob.py" type="text/plain"><tt>glob</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
@@ -11131,6 +11145,7 @@ imported by:
  &#8226;   <a href="#json.encoder">json.encoder</a>
  &#8226;   <a href="#json.scanner">json.scanner</a>
  &#8226;   <a href="#main.py">main.py</a>
+ &#8226;   <a href="#model.ci_ops">model.ci_ops</a>
  &#8226;   <a href="#multiprocessing.resource_tracker">multiprocessing.resource_tracker</a>
  &#8226;   <a href="#numpy.__config__">numpy.__config__</a>
  &#8226;   <a href="#numpy.testing._private.utils">numpy.testing._private.utils</a>
@@ -13005,6 +13020,7 @@ imported by:
 <span class="moduletype">Package</span>  <div class="import">
 imports:
     <a href="#model.auth">model.auth</a>
+ &#8226;   <a href="#model.ci_ops">model.ci_ops</a>
  &#8226;   <a href="#model.git_ops">model.git_ops</a>
  &#8226;   <a href="#model.scanner">model.scanner</a>
 
@@ -13013,6 +13029,8 @@ imports:
 imported by:
     <a href="#main.py">main.py</a>
  &#8226;   <a href="#model.auth">model.auth</a>
+ &#8226;   <a href="#model.ci_ops">model.ci_ops</a>
+ &#8226;   <a href="#model.error_handler">model.error_handler</a>
  &#8226;   <a href="#model.git_ops">model.git_ops</a>
  &#8226;   <a href="#model.scanner">model.scanner</a>
 
@@ -13029,6 +13047,7 @@ imports:
  &#8226;   <a href="#os">os</a>
  &#8226;   <a href="#pathlib">pathlib</a>
  &#8226;   <a href="#subprocess">subprocess</a>
+ &#8226;   <a href="#urllib.parse">urllib.parse</a>
 
   </div>
   <div class="import">
@@ -13040,20 +13059,59 @@ imported by:
 </div>
 
 <div class="node">
+  <a name="model.ci_ops"></a>
+  <a target="code" href="///D:/repositorios/desktop-projects/gitbulk-project/src/model/ci_ops.py" type="text/plain"><tt>model.ci_ops</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#json">json</a>
+ &#8226;   <a href="#model">model</a>
+ &#8226;   <a href="#model.git_ops">model.git_ops</a>
+ &#8226;   <a href="#re">re</a>
+ &#8226;   <a href="#urllib.request">urllib.request</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#model">model</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="model.error_handler"></a>
+  <a target="code" href="///D:/repositorios/desktop-projects/gitbulk-project/src/model/error_handler.py" type="text/plain"><tt>model.error_handler</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#git">git</a>
+ &#8226;   <a href="#model">model</a>
+ &#8226;   <a href="#re">re</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#model.git_ops">model.git_ops</a>
+
+  </div>
+
+</div>
+
+<div class="node">
   <a name="model.git_ops"></a>
   <a target="code" href="///D:/repositorios/desktop-projects/gitbulk-project/src/model/git_ops.py" type="text/plain"><tt>model.git_ops</tt></a>
 <span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#model">model</a>
+    <a href="#git">git</a>
+ &#8226;   <a href="#model">model</a>
+ &#8226;   <a href="#model.error_handler">model.error_handler</a>
  &#8226;   <a href="#os">os</a>
- &#8226;   <a href="#re">re</a>
- &#8226;   <a href="#subprocess">subprocess</a>
  &#8226;   <a href="#typing">typing</a>
 
   </div>
   <div class="import">
 imported by:
     <a href="#model">model</a>
+ &#8226;   <a href="#model.ci_ops">model.ci_ops</a>
 
   </div>
 
@@ -29530,7 +29588,8 @@ imported by:
  &#8226;   <a href="#markdown_it.rules_inline.text">markdown_it.rules_inline.text</a>
  &#8226;   <a href="#mdurl._decode">mdurl._decode</a>
  &#8226;   <a href="#mdurl._parse">mdurl._parse</a>
- &#8226;   <a href="#model.git_ops">model.git_ops</a>
+ &#8226;   <a href="#model.ci_ops">model.ci_ops</a>
+ &#8226;   <a href="#model.error_handler">model.error_handler</a>
  &#8226;   <a href="#ntpath">ntpath</a>
  &#8226;   <a href="#numpy._core._internal">numpy._core._internal</a>
  &#8226;   <a href="#numpy._typing._add_docstring">numpy._typing._add_docstring</a>
@@ -29941,6 +30000,7 @@ imported by:
  &#8226;   <a href="#rich.pretty">rich.pretty</a>
  &#8226;   <a href="#rich.progress">rich.progress</a>
  &#8226;   <a href="#rich.progress_bar">rich.progress_bar</a>
+ &#8226;   <a href="#rich.prompt">rich.prompt</a>
  &#8226;   <a href="#rich.protocol">rich.protocol</a>
  &#8226;   <a href="#rich.region">rich.region</a>
  &#8226;   <a href="#rich.repr">rich.repr</a>
@@ -31137,6 +31197,7 @@ imported by:
  &#8226;   <a href="#rich.pretty">rich.pretty</a>
  &#8226;   <a href="#rich.progress">rich.progress</a>
  &#8226;   <a href="#rich.progress_bar">rich.progress_bar</a>
+ &#8226;   <a href="#rich.prompt">rich.prompt</a>
  &#8226;   <a href="#rich.protocol">rich.protocol</a>
  &#8226;   <a href="#rich.repr">rich.repr</a>
  &#8226;   <a href="#rich.rule">rich.rule</a>
@@ -31696,7 +31757,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#rich.__main__">rich.__main__</a>
+    <a href="#main.py">main.py</a>
+ &#8226;   <a href="#rich.__main__">rich.__main__</a>
  &#8226;   <a href="#rich._inspect">rich._inspect</a>
  &#8226;   <a href="#rich.align">rich.align</a>
  &#8226;   <a href="#rich.box">rich.box</a>
@@ -31825,6 +31887,25 @@ imports:
   <div class="import">
 imported by:
     <a href="#rich.progress">rich.progress</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="rich.prompt"></a>
+  <a target="code" href="///C:/Users/rezzt/AppData/Local/Packages/PythonSoftwareFoundation.Python.3.13_qbz5n2kfra8p0/LocalCache/local-packages/Python313/site-packages/rich/prompt.py" type="text/plain"><tt>rich.prompt</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#rich">rich</a>
+ &#8226;   <a href="#rich.console">rich.console</a>
+ &#8226;   <a href="#rich.text">rich.text</a>
+ &#8226;   <a href="#typing">typing</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#main.py">main.py</a>
 
   </div>
 
@@ -32309,6 +32390,7 @@ imported by:
  &#8226;   <a href="#rich.panel">rich.panel</a>
  &#8226;   <a href="#rich.pretty">rich.pretty</a>
  &#8226;   <a href="#rich.progress">rich.progress</a>
+ &#8226;   <a href="#rich.prompt">rich.prompt</a>
  &#8226;   <a href="#rich.rule">rich.rule</a>
  &#8226;   <a href="#rich.scope">rich.scope</a>
  &#8226;   <a href="#rich.segment">rich.segment</a>
@@ -32976,7 +33058,6 @@ imported by:
  &#8226;   <a href="#ctypes.util">ctypes.util</a>
  &#8226;   <a href="#http.server">http.server</a>
  &#8226;   <a href="#model.auth">model.auth</a>
- &#8226;   <a href="#model.git_ops">model.git_ops</a>
  &#8226;   <a href="#multiprocessing.popen_spawn_win32">multiprocessing.popen_spawn_win32</a>
  &#8226;   <a href="#multiprocessing.util">multiprocessing.util</a>
  &#8226;   <a href="#numpy.f2py">numpy.f2py</a>
@@ -33886,6 +33967,7 @@ imported by:
  &#8226;   <a href="#rich.pretty">rich.pretty</a>
  &#8226;   <a href="#rich.progress">rich.progress</a>
  &#8226;   <a href="#rich.progress_bar">rich.progress_bar</a>
+ &#8226;   <a href="#rich.prompt">rich.prompt</a>
  &#8226;   <a href="#rich.protocol">rich.protocol</a>
  &#8226;   <a href="#rich.region">rich.region</a>
  &#8226;   <a href="#rich.repr">rich.repr</a>
@@ -34298,6 +34380,7 @@ imported by:
  &#8226;   <a href="#markdown_it.common.normalize_url">markdown_it.common.normalize_url</a>
  &#8226;   <a href="#mdurl._encode">mdurl._encode</a>
  &#8226;   <a href="#mimetypes">mimetypes</a>
+ &#8226;   <a href="#model.auth">model.auth</a>
  &#8226;   <a href="#nturl2path">nturl2path</a>
  &#8226;   <a href="#numpy.lib._datasource">numpy.lib._datasource</a>
  &#8226;   <a href="#pathlib._local">pathlib._local</a>
@@ -34351,6 +34434,7 @@ imports:
   <div class="import">
 imported by:
     <a href="#http.cookiejar">http.cookiejar</a>
+ &#8226;   <a href="#model.ci_ops">model.ci_ops</a>
  &#8226;   <a href="#numpy.lib._datasource">numpy.lib._datasource</a>
  &#8226;   <a href="#pygments.lexers._lua_builtins">pygments.lexers._lua_builtins</a>
  &#8226;   <a href="#pygments.lexers._mysql_builtins">pygments.lexers._mysql_builtins</a>
