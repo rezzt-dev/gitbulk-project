@@ -2,7 +2,8 @@
 
 # --- Dependencias de Ejecución ---
 rich>=13.0.0
-# (El programa base utiliza exclusivamente la librería estándar de Python excepto la interfaz Rich)
+GitPython>=3.1.0
+# (El programa base utiliza estas dependencias para sus procesos paralelos y visuales)
 
 # --- Dependencias de Desarrollo y Compilación ---
 # Requerido para generar el ejecutable (.exe / binario)
