@@ -4,7 +4,7 @@
 
 Una herramienta profesional de línea de comandos (CLI) escrita en Python para gestionar y actualizar múltiples repositorios Git de forma masiva y concurrente.
 
-> **📚 Documentación del Proyecto:** Consulta guías de instalación, arquitecturas y uso avanzado en el manual oficial: [Español (ES)](project-doc/es-project-doc.md) | [English (EN)](project-doc/en-project-doc.md).
+> **Documentación del Proyecto:** Consulta guías de instalación, arquitecturas y uso avanzado en el manual oficial: [Español (ES)](project-doc/es-project-doc.md) | [English (EN)](project-doc/en-project-doc.md).
 
 En lugar de ir carpeta por carpeta ejecutando comandos, **GitBulk** busca recursivamente todos los repositorios en una ruta específica y ejecuta operaciones de forma silenciosa en paralelo (ej. `fetch`, `checkout`, `clean`), reduciendo drásticamente el tiempo de espera.
 
