@@ -1,4 +1,4 @@
-('D:\\repositorios\\desktop-projects\\gitbulk-project\\dist\\gitbulk.exe',
+('D:\\repositorios\\desktop-projects\\gitbulk-project\\dist\\gitbulk-windows.exe',
  True,
  False,
  False,
@@ -29,7 +29,7 @@
  None,
  None,
  None,
- 'D:\\repositorios\\desktop-projects\\gitbulk-project\\build\\gitbulk\\gitbulk.pkg',
+ 'D:\\repositorios\\desktop-projects\\gitbulk-project\\build\\gitbulk\\gitbulk-windows.pkg',
  [('pyi-contents-directory _internal', '', 'OPTION'),
   ('PYZ-00.pyz',
    'D:\\repositorios\\desktop-projects\\gitbulk-project\\build\\gitbulk\\PYZ-00.pyz',
@@ -84,10 +84,6 @@
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\DLLs\\_hashlib.pyd',
    'EXTENSION'),
-  ('_socket.pyd',
-   'C:\\Program '
-   'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\DLLs\\_socket.pyd',
-   'EXTENSION'),
   ('_lzma.pyd',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\DLLs\\_lzma.pyd',
@@ -115,6 +111,10 @@
   ('_queue.pyd',
    'C:\\Program '
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\DLLs\\_queue.pyd',
+   'EXTENSION'),
+  ('_socket.pyd',
+   'C:\\Program '
+   'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.13_3.13.3312.0_x64__qbz5n2kfra8p0\\DLLs\\_socket.pyd',
    'EXTENSION'),
   ('_wmi.pyd',
    'C:\\Program '
@@ -158,7 +158,7 @@
  [],
  False,
  False,
- 1774369475,
+ 1774642581,
  [('run.exe',
    'D:\\repositorios\\desktop-projects\\gitbulk-project\\venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
    'EXECUTABLE')],

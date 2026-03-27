@@ -1,6 +1,6 @@
 """
-capa de vista (view).
-maneja la interaccion con el usuario: argumentos CLI y visualizacion en terminal.
+View layer (view).
+Handles user interaction: CLI argument parsing and terminal rendering.
 """
 
 from .cli import (
@@ -11,6 +11,7 @@ from .cli import (
   show_result,
   show_auth_fallback,
   show_auth_fallback_start,
+  show_clean_warning,
   show_summary,
   prompt_for_credentials,
   show_auth_success,
@@ -27,6 +28,7 @@ __all__ = [
   "show_result",
   "show_auth_fallback",
   "show_auth_fallback_start",
+  "show_clean_warning",
   "show_summary",
   "prompt_for_credentials",
   "show_auth_success",

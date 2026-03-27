@@ -1,11 +1,34 @@
 import subprocess
 import os
+import sys
 import urllib.parse
 from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+
+console = Console()
+
+def _restrict_file_permissions(filepath: Path) -> None:
+    """
+    Restringe los permisos del fichero al propietario exclusivamente.
+    En POSIX (Linux/macOS) usa chmod 0o600.
+    En Windows usa icacls para eliminar el acceso heredado y conceder permisos solo al usuario actual.
+    """
+    if sys.platform == "win32":
+        try:
+            username = os.environ.get("USERNAME", "")
+            subprocess.run(
+                ["icacls", str(filepath), "/inheritance:r", "/grant:r", f"{username}:F"],
+                check=True, capture_output=True
+            )
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass
+    else:
+        os.chmod(filepath, 0o600)
 
 def setup_global_git_credentials(username: str, token: str) -> bool:
   """
-  Configure git to globally store credentials for https://github.com
+  Configures Git to globally store credentials for https://github.com.
   Returns True if successful, False otherwise.
   """
   try:
@@ -18,7 +41,7 @@ def setup_global_git_credentials(username: str, token: str) -> bool:
     )
     
   except subprocess.CalledProcessError as e:
-    print(f"Error configurando el helper de credenciales: {e.stderr}")
+    console.print(f"[bold red]Error configuring the credential helper:[/bold red] {e.stderr}")
     return False
 
   # Create or append to the ~/.git-credentials file
@@ -45,16 +68,26 @@ def setup_global_git_credentials(username: str, token: str) -> bool:
         for cred in updated_creds:
             f.write(f"{cred}\n")
             
-    # Restrict permissions for security
-    os.chmod(credentials_file, 0o600)
-    
+    # Restringir permisos del fichero (multiplataforma)
+    _restrict_file_permissions(credentials_file)
+
+    console.print()
+    console.print(Panel(
+        f"[bold yellow]Credentials saved in plaintext at:[/bold yellow] [cyan]{credentials_file}[/cyan]\n"
+        "[dim]Ensure only you have read access to this file.[/dim]\n"
+        "[dim]Consider revoking the token on GitHub if this is a shared machine.[/dim]",
+        title="[bold red]Security Warning[/bold red]",
+        border_style="yellow",
+        expand=False
+    ))
+    console.print()
     return True
   except Exception as e:
-     print(f"Error guardando credenciales en ~/.git-credentials: {str(e)}")
-     return False
+    console.print(f"[bold red]Error saving credentials to ~/.git-credentials:[/bold red] {str(e)}")
+    return False
 
 def get_github_token() -> str:
-    """Extrae sigilosamente el token (PAT) almacenado en las credenciales globales sin avisos."""
+    """Silently extracts the stored PAT from global Git credentials."""
     credentials_file = Path.home() / ".git-credentials"
     if not credentials_file.exists(): 
         return None

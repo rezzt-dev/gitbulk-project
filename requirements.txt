@@ -1,10 +1,13 @@
-# Gitbulk - Dependencias del proyecto
+# GitBulk - Project Dependencies
 
-# --- Dependencias de Ejecución ---
-rich>=13.0.0
-GitPython>=3.1.0
-# (El programa base utiliza estas dependencias para sus procesos paralelos y visuales)
+# --- Runtime Dependencies ---
+rich==14.3.3
+GitPython==3.1.46
 
-# --- Dependencias de Desarrollo y Compilación ---
-# Requerido para generar el ejecutable (.exe / binario)
-pyinstaller>=6.0.0
+# --- Development and Build Dependencies ---
+# Required to compile the standalone executable (.exe / binary)
+pyinstaller==6.19.0
+
+# --- Test Dependencies ---
+# Required to run the automated test suite
+pytest>=8.0.0

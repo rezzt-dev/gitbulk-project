@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 from typing import Dict, Any
+from rich.console import Console
+
+console = Console()
 
  # definimos donde se guardara el archivo de configuracion.
 CONFIG_FILE = Path.home() / ".git_manager_pro.json"
@@ -28,11 +31,12 @@ def load_config() -> Dict[str, Any]:
 
 def save_config(config_data: Dict[str, Any]) -> None:
   """
-  guarda el diccionario de configuracion en el archivo JSON del usuario.
+  Guarda el diccionario de configuracion en el archivo JSON del usuario.
+  Si no es posible escribir el fichero, informa al usuario en lugar de fallar silenciosamente.
   """
 
   try:
-    with open (CONFIG_FILE, "w", encoding="utf-8") as f:
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
       json.dump(config_data, f, indent=4)
   except IOError as e:
-    pass
+    console.print(f"[bold yellow][Warning][/bold yellow] Could not save configuration to {CONFIG_FILE}: {e}")

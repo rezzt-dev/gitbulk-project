@@ -27,6 +27,7 @@ from view import (
     show_result,
     show_auth_fallback,
     show_auth_fallback_start,
+    show_clean_warning,
     show_summary,
     prompt_for_credentials,
     show_auth_success,
@@ -49,46 +50,41 @@ def main():
     if setup_global_git_credentials(username, token):
       show_auth_success(username)
     else:
-      print(f"\n[ERROR] No se pudieron guardar las credenciales.")
+      console.print(f"\n[ERROR] Failed to save credentials.")
     sys.exit(0)
 
   target_dir = os.path.abspath(args.dir)
   config["last_directory"] = target_dir
   save_config(config)
 
+  MAX_WORKERS = 50
   if getattr(args, 'workers', 5) <= 0:
-      console.print("\n[bold red]Error: El número de hilos concurrentes (-w) debe ser mayor a 0.[/bold red]")
+      console.print("\n[bold red]Error: The number of concurrent threads (-w) must be greater than 0.[/bold red]")
+      sys.exit(1)
+  if getattr(args, 'workers', 5) > MAX_WORKERS:
+      console.print(f"\n[bold red]Error: The number of concurrent threads (-w) cannot exceed {MAX_WORKERS}. Received: {args.workers}.[/bold red]")
       sys.exit(1)
 
   if args.operation == "checkout" and not getattr(args, 'branch', None):
-      console.print("\n[bold red]Error: La operación 'checkout' requiere obligatoriamente una rama destino pasándole el flag -b / --branch.[/bold red]")
+      console.print("\n[bold red]Error: The 'checkout' operation requires a target branch via the -b / --branch flag.[/bold red]")
       sys.exit(1)
 
+  if getattr(args, 'autostash', False) and args.operation != "pull":
+      console.print(f"\n[bold yellow]Warning: --autostash has no effect on '{args.operation}'. It only applies to 'pull'.[/bold yellow]")
+
   if args.operation == "clean":
-      from rich.panel import Panel
-      console.print(Panel("[bold red]¡ADVERTENCIA DE SEGURIDAD![/bold red]\n"
-        "Esta operación ejecutará 'git fetch --prune' y 'git clean -xfd'.\n"
-        "Se eliminarán [bold]PERMANENTEMENTE[/bold] referencias a ramas remotas borradas y todo archivo local no versionado.\n"
-        "Asegúrate de no tener configuraciones locales urgentes o variables (.env) sin guardar.", 
-        border_style="red"
-      ))
-      
-      try:
-          from rich.prompt import Confirm
-          if not Confirm.ask("[bold yellow]¿Estás ABSOLUTAMENTE seguro de continuar en todos los repos?[/bold yellow]"):
-              console.print("[dim]Operación 'clean' masiva cancelada. Todo está a salvo.[/dim]")
-              sys.exit(0)
-      except (KeyboardInterrupt, EOFError):
-          console.print("\n[dim]Prompt de seguridad cancelado abrúptamente.[/dim]")
-          sys.exit(0)
+      if getattr(args, 'dry_run', False):
+          console.print("[bold yellow][DRY-RUN][/bold yellow] Previewing 'clean' — no files will be deleted.\n")
+      else:
+          show_clean_warning()
 
   log_file = None
   if args.log:
     try:
         log_file = open(args.log, "w", encoding="utf-8")
-        log_file.write(f"--- GitBulk Log: Operacion {args.operation.upper()} en {target_dir} ---\n\n")
+        log_file.write(f"--- GitBulk Log: Operation {args.operation.upper()} on {target_dir} ---\n\n")
     except OSError as e:
-        console.print(f"\n[bold red]Error Fatal: No se pudo crear o abrir el archivo de log en la ruta especificada:[/bold red]\n{e}")
+        console.print(f"\n[bold red]Fatal Error: Could not create or open the log file at the specified path:[/bold red]\n{e}")
         sys.exit(1)
 
   try:
@@ -98,9 +94,9 @@ def main():
         repos = find_git_repos(target_dir)
         if not repos:
            show_no_repos_found(target_dir)
-           if log_file: log_file.write("No se encontraron repositorios.\n")
+           if log_file: log_file.write("No repositories found.\n")
            sys.exit(0)
-           
+
         show_start_processing(len(repos), args.operation)
         snapshot = []
         counts = {"OK": 0}
@@ -136,10 +132,10 @@ def main():
             with open(args.file, "w", encoding="utf-8") as f:
                 json.dump(snapshot, f, indent=4)
         except OSError as e:
-            console.print(f"\n[bold red]Error Fatal: Imposible escribir el snapshot en la ruta exportada:[/bold red]\n{e}")
+            console.print(f"\n[bold red]Fatal Error: Cannot write snapshot to the specified export path:[/bold red]\n{e}")
             sys.exit(1)
-            
-        console.print(f"\n[bold green]OK[/bold green] Exportacion completada. {len(snapshot)} repositorios guardados en [cyan]{args.file}[/cyan].\n")
+
+        console.print(f"\n[bold green]OK[/bold green] Export complete. {len(snapshot)} repositories saved to [cyan]{args.file}[/cyan].\n")
         show_summary(counts)
         sys.exit(0)
 
@@ -157,17 +153,17 @@ def main():
 
     if args.operation == "restore":
         if not os.path.exists(args.file):
-            console.print(f"[bold red]El archivo {args.file} no existe.[/bold red]")
+            console.print(f"[bold red]File {args.file} does not exist.[/bold red]")
             sys.exit(1)
-            
+
         with open(args.file, "r", encoding="utf-8") as f:
             try:
                 snapshot = json.load(f)
             except json.JSONDecodeError:
-                console.print(f"[bold red]El archivo {args.file} no es un JSON valido o esta corrupto.[/bold red]")
+                console.print(f"[bold red]File {args.file} is not valid JSON or is corrupted.[/bold red]")
                 sys.exit(1)
             except OSError as e:
-                console.print(f"[bold red]Error del S.O extrayendo JSON:[/bold red] {e}")
+                console.print(f"[bold red]OS error reading JSON:[/bold red] {e}")
                 sys.exit(1)
                 
         repos_to_clone = []
@@ -177,7 +173,14 @@ def main():
                 repos_to_clone.append((repo_abs_path, repo))
                 
         if not repos_to_clone:
-            console.print(f"\n[bold green]Todo esta sincronizado. Ningun repositorio faltante en la ruta especificada.[/bold green]")
+            console.print(f"\n[bold green]All repositories are in sync. No missing repositories found.[/bold green]")
+            sys.exit(0)
+
+        if getattr(args, 'dry_run', False):
+            console.print(f"[bold yellow][DRY-RUN][/bold yellow] The following {len(repos_to_clone)} repositories would be cloned:\n")
+            for path, info in repos_to_clone:
+                console.print(f"  [cyan]{info.get('path', path)}[/cyan]  [dim]{info.get('url', '')}[/dim]")
+            console.print("\n[dim]No changes have been made.[/dim]")
             sys.exit(0)
             
         show_start_processing(len(repos_to_clone), args.operation)
@@ -245,8 +248,8 @@ def main():
     if args.operation == "ci-status":
         token = get_github_token()
         if not token:
-            console.print("\n[bold red]Error: No se encontro un token de GitHub configurado.[/bold red]")
-            console.print("[yellow]Por favor, ejecuta 'python main.py auth' primero para guardar tus credenciales globales (PAT).[/yellow]\n")
+            console.print("\n[bold red]Error: No GitHub token found.[/bold red]")
+            console.print("[yellow]Please run 'gitbulk auth' first to save your global credentials (PAT).[/yellow]\n")
             sys.exit(1)
             
         repos = find_git_repos(target_dir)
@@ -290,7 +293,7 @@ def main():
 
     if not repos:
       show_no_repos_found(target_dir)
-      if log_file: log_file.write("No se encontraron repositorios.\n")
+      if log_file: log_file.write("No repositories found.\n")
       sys.exit(0)
     
     show_start_processing(len(repos), args.operation)
@@ -309,7 +312,15 @@ def main():
       task = progress.add_task(f"[bold cyan]Ejecutando {args.operation.upper()}...", total=len(repos))
       with ThreadPoolExecutor(max_workers=args.workers) as executor:
         future_to_repo = {
-          executor.submit(run_git_operation, repo, args.operation, False, getattr(args, 'autostash', False), getattr(args, 'branch', None)): repo 
+          executor.submit(
+              run_git_operation,
+              repo,
+              args.operation,
+              False,
+              getattr(args, 'autostash', False),
+              getattr(args, 'branch', None),
+              getattr(args, 'dry_run', False)
+          ): repo 
           for repo in repos
         }
       
@@ -335,7 +346,7 @@ def main():
 
     show_summary(counts)
     if log_file:
-        log_file.write(f"\n--- Resumen Final ---\n")
+        log_file.write(f"\n--- Final Summary ---\n")
         for key, val in counts.items():
            if val > 0:
               log_file.write(f"{key}: {val}\n")
@@ -349,5 +360,5 @@ if __name__ == "__main__":
   try:
     main()
   except KeyboardInterrupt:
-    print("\n\n operacion cancelada por el usuario.")
+    console.print("\n\nOperation cancelled by user.")
     sys.exit(1)

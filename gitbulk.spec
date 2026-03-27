@@ -5,7 +5,36 @@ a = Analysis(
     pathex=['src'],
     binaries=[],
     datas=[],
-    hiddenimports=['persistence', 'view', 'model', 'git', 'rich'],
+    hiddenimports=[
+        # Internal layers
+        'persistence',
+        'view',
+        'model',
+        # GitPython
+        'git',
+        'git.exc',
+        'git.repo',
+        'git.repo.base',
+        'git.objects',
+        'git.refs',
+        'git.index',
+        'git.remote',
+        # Rich UI
+        'rich',
+        'rich.console',
+        'rich.panel',
+        'rich.table',
+        'rich.tree',
+        'rich.prompt',
+        'rich.progress',
+        'rich.theme',
+        'rich.markup',
+        'rich.text',
+        # Standard library (occasionally missed by PyInstaller)
+        'urllib.request',
+        'urllib.error',
+        'socket',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -13,6 +42,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -21,7 +51,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='gitbulk',
+    name='gitbulk-windows',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

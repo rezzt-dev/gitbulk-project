@@ -3,10 +3,10 @@ from typing import Tuple
 from git import Repo, exc
 from .error_handler import parse_git_error
 
-def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False, autostash: bool = False, target_branch: str = None) -> Tuple[str, str, str, str]:
+def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False, autostash: bool = False, target_branch: str = None, dry_run: bool = False) -> Tuple[str, str, str, str]:
     try:
         if not os.path.exists(os.path.join(repo_path, ".git")):
-            return "ERROR", "No es un directorio Git", repo_path, ""
+            return "ERROR", "Not a Git directory", repo_path, ""
             
         repo = Repo(repo_path)
         
@@ -40,21 +40,26 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
                 if tracking_branch:
                     commits_behind = list(repo.iter_commits(f'{active_branch.name}..{tracking_branch.name}'))
                     if commits_behind:
-                        return "FETCH_UPDATE", f"{len(commits_behind)} commits por bajar", repo_path, output
+                        return "FETCH_UPDATE", f"{len(commits_behind)} commits to pull", repo_path, output
             except Exception:
                 pass
-            return "OK", "Al día", repo_path, output
+            return "OK", "Up to date", repo_path, output
 
         if operation == "clean":
+            if dry_run:
+                output_prune = repo.git.fetch("--prune", "--dry-run")
+                output_clean = repo.git.clean("-xfd", "-n")
+                preview = f"{output_prune}\n{output_clean}".strip()
+                return "SIMULATED", "[dry-run] clean", repo_path, preview if preview else "Nothing to remove."
             output_prune = repo.git.fetch("--prune")
             output_clean = repo.git.clean("-xfd")
-            return "CLEANED", "Limpieza agresiva finalizada", repo_path, f"{output_prune}\n{output_clean}".strip()
+            return "CLEANED", "Aggressive cleanup complete", repo_path, f"{output_prune}\n{output_clean}".strip()
 
         if operation == "pull":
             is_dirty = repo.is_dirty(untracked_files=True)
             
             if is_dirty and not autostash:
-                return "CONFLICT", "Cambios locales impiden actualizar", repo_path, "Confirma tus cambios o activa --autostash"
+                return "CONFLICT", "Local changes prevent update", repo_path, "Commit your changes or enable --autostash"
                 
             args = ["--ff-only"]
             if autostash:
@@ -62,23 +67,23 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
             output = repo.git.pull(*args)
             
             if is_dirty and autostash:
-                return "STASH_RESTORED", "Cambios sincronizados y auto-escondidos", repo_path, output
-                
+                return "STASH_RESTORED", "Changes synced and auto-stashed", repo_path, output
+
             return "OK", "", repo_path, output
 
         if operation == "checkout":
             if not target_branch:
-                return "ERROR", "Operación fallida", repo_path, "Falta especificar nombre de la rama destino pasándole el flag -b."
+                return "ERROR", "Operation failed", repo_path, "Missing target branch name. Use the -b flag."
             
             try:
                 if not repo.head.is_detached and repo.active_branch.name == target_branch:
-                    return "CLEAN", "Ya en la rama de destino", repo_path, ""
+                    return "CLEAN", "Already on target branch", repo_path, ""
             except TypeError:
                 pass
             
             if target_branch in [h.name for h in repo.heads]:
                 repo.heads[target_branch].checkout()
-                return "CHECKOUT", "Movido a rama local", repo_path, ""
+                return "CHECKOUT", "Switched to local branch", repo_path, ""
             
             if "origin" in repo.remotes:
                 origin = repo.remotes.origin
@@ -86,11 +91,11 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
                 refs = [r.name for r in origin.refs]
                 if remote_ref in refs:
                     repo.create_head(target_branch, origin.refs[target_branch]).set_tracking_branch(origin.refs[target_branch]).checkout()
-                    return "CHECKOUT", "Rastreando rama remota descendente", repo_path, ""
+                    return "CHECKOUT", "Tracking remote branch", repo_path, ""
                     
-            return "IGNORED", "Rama inexistente virtual", repo_path, f"Omitiendo repo"
+            return "IGNORED", "Branch not found", repo_path, "Skipping repository"
 
-        return "ERROR", "Operación no soportada", repo_path, ""
+        return "ERROR", "Unsupported operation", repo_path, ""
 
     except exc.GitCommandError as e:
         error_msg = parse_git_error(e)
@@ -98,28 +103,32 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
             return "AUTH", "", repo_path, "Requiere configuración."
 
         if operation == "pull":
-            if "Conflicto de Autostash" in error_msg:
-                return "STASH_CONFLICT", "Conflicto al restaurar stash", repo_path, error_msg
-            if "Conflicto de pull" in error_msg:
-                return "CONFLICT", "Cambios locales impiden actualizar", repo_path, error_msg
-            if "Ramas divergentes" in error_msg:
-                return "DIVERGENT", "Requiere merge manual", repo_path, error_msg
-                
-        return "ERROR", "Operación fallida", repo_path, error_msg
+            if "Autostash conflict" in error_msg or "Conflicto de Autostash" in error_msg:
+                return "STASH_CONFLICT", "Conflict restoring stash", repo_path, error_msg
+            if "Pull conflict" in error_msg or "Conflicto de pull" in error_msg:
+                return "CONFLICT", "Local changes prevent update", repo_path, error_msg
+            if "Divergent branches" in error_msg or "Ramas divergentes" in error_msg:
+                return "DIVERGENT", "Manual merge required", repo_path, error_msg
+
+        return "ERROR", "Operation failed", repo_path, error_msg
     except Exception as e:
-        return "ERROR", "Error inesperado de motor", repo_path, str(e)
+        return "ERROR", "Unexpected engine error", repo_path, str(e)
 
 
 def get_repo_metadata(repo_path: str) -> dict:
-    metadata = {"url": "", "branch": ""}
+    metadata = {"url": "", "branch": "", "error": ""}
     try:
         repo = Repo(repo_path)
         if repo.remotes:
             metadata["url"] = list(repo.remotes[0].urls)[0]
         if not repo.head.is_detached:
             metadata["branch"] = repo.active_branch.name
-    except Exception:
-        pass
+    except exc.InvalidGitRepositoryError:
+        metadata["error"] = "Invalid or corrupted Git repository."
+    except PermissionError:
+        metadata["error"] = "Insufficient read permissions on the repository."
+    except Exception as e:
+        metadata["error"] = str(e)
     return metadata
 
 def clone_repo(target_dir: str, repo_info: dict) -> Tuple[str, str, str, str]:
@@ -127,7 +136,7 @@ def clone_repo(target_dir: str, repo_info: dict) -> Tuple[str, str, str, str]:
     branch = repo_info.get("branch")
     
     if not url:
-        return "ERROR", "Falta URL remota", target_dir, ""
+        return "ERROR", "Missing remote URL", target_dir, ""
         
     try:
         parent_dir = os.path.dirname(target_dir)
@@ -141,18 +150,18 @@ def clone_repo(target_dir: str, repo_info: dict) -> Tuple[str, str, str, str]:
         if branch:
             repo.git.checkout(branch)
             
-        return "OK", branch if branch else "default", target_dir, "Clonado exitosamente"
+        return "OK", branch if branch else "default", target_dir, "Successfully cloned"
         
     except exc.GitCommandError as e:
         error_msg = parse_git_error(e)
-        if "Conflicto de sistema" in error_msg:
-            return "CLEAN", "Ya existe", target_dir, ""
+        if "System conflict" in error_msg or "Conflicto de sistema" in error_msg:
+            return "CLEAN", "Already exists", target_dir, ""
         return "ERROR", "", target_dir, error_msg
     except Exception as e:
-        return "ERROR", "Excepcion critica en clonacion", target_dir, str(e)
+        return "ERROR", "Critical exception during clone", target_dir, str(e)
 
 def get_all_branches(repo_path: str) -> dict:
-    data = {"current": "", "local": [], "remote_only": []}
+    data = {"current": "", "local": [], "remote_only": [], "error": ""}
     try:
         repo = Repo(repo_path)
         if not repo.head.is_detached:
@@ -164,6 +173,10 @@ def get_all_branches(repo_path: str) -> dict:
                     if ref.remote_head != 'HEAD':
                         if ref.remote_head not in data["local"]:
                             data["remote_only"].append(f"{r.name}/{ref.remote_head}")
-    except Exception:
-        pass
+    except exc.InvalidGitRepositoryError:
+        data["error"] = "Invalid or corrupted Git repository."
+    except PermissionError:
+        data["error"] = "Insufficient read permissions on the repository."
+    except Exception as e:
+        data["error"] = str(e)
     return data

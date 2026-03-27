@@ -1,10 +1,12 @@
 import urllib.request
+import urllib.error
 import json
 import re
+import socket
 from .git_ops import get_repo_metadata
 
 def get_ci_status(repo_path: str, token: str) -> dict:
-    """Consulte el estado asíncrono de los pipelines CI del head actual a la API de Github"""
+    """Queries the GitHub API for the CI pipeline status of the current HEAD commit."""
     meta = get_repo_metadata(repo_path)
     url = meta.get("url", "")
     branch = meta.get("branch", "")
@@ -47,5 +49,15 @@ def get_ci_status(repo_path: str, token: str) -> dict:
                 
             return {"state": "none", "branch": branch}
             
-    except Exception:
-        return {"state": "error", "branch": branch}
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            reason = "Invalid token or insufficient permissions (HTTP 401)."
+        elif e.code == 404:
+            reason = "Repository not found or inaccessible (HTTP 404)."
+        else:
+            reason = f"GitHub API error (HTTP {e.code})."
+        return {"state": "error", "branch": branch, "reason": reason}
+    except (urllib.error.URLError, socket.timeout):
+        return {"state": "error", "branch": branch, "reason": "Network timeout or failure contacting the GitHub API."}
+    except Exception as e:
+        return {"state": "error", "branch": branch, "reason": str(e)}
