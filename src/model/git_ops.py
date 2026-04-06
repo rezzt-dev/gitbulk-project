@@ -32,7 +32,7 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
                 except ValueError:
                     return "CLEAN", "No commits yet", repo_path, ""
 
-        if operation == "fetch":
+        if operation in ["fetch", "sync"]:
             output = repo.git.fetch()
             try:
                 active_branch = repo.active_branch

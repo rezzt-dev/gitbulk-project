@@ -38,6 +38,20 @@ from view import (
 from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches, get_github_token, get_ci_status
 
 def main():
+  if "--gui" in sys.argv:
+    try:
+      import PySide6
+    except ImportError:
+      print("\n[ERROR] PySide6 is not installed. Please run 'pip install PySide6' or update from requirements.txt")
+      sys.exit(1)
+    
+    # Remove --gui from sys.argv so other internal parsing won't complain if strictly checked
+    sys.argv.remove("--gui")
+    
+    # Launch PySide6 app
+    from gui.app import run_gui
+    sys.exit(run_gui())
+
   os.system("")
   os.system("cls" if os.name == "nt" else "clear")
   config = load_config()

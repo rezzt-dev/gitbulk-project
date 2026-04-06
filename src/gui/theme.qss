@@ -1,0 +1,362 @@
+/* ============================================================
+   GitBulk — Premium Dark Theme
+   Base: #161616 | Accent: #E2E2E2 | Corners: 0px (Square)
+   ============================================================ */
+
+/* ── Global Reset ── */
+* {
+    border-radius: 0px;
+    outline: none;
+}
+
+QMainWindow, QDialog {
+    background-color: #161616;
+    color: #EEEEEE;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+}
+
+QWidget {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+    color: #EEEEEE;
+    background-color: transparent;
+}
+
+/* ── Master Window Container (Frameless Border) ── */
+QWidget#masterWidget {
+    background-color: #161616;
+    border: 1px solid #262626;
+}
+
+/* ── Custom Title Bar ── */
+QFrame#titleBar {
+    background-color: #0E0E0E;
+    border-bottom: 1px solid #1E1E1E;
+    min-height: 36px;
+    max-height: 36px;
+}
+
+QLabel#titleBarText {
+    font-size: 12px;
+    font-weight: 600;
+    color: #DDDDDD;
+    letter-spacing: 0.3px;
+}
+
+QLabel#titleBarSubtext {
+    font-size: 11px;
+    color: #444444;
+    margin-left: 4px;
+}
+
+/* Title Bar Buttons — handled by TrafficLightGroup via QPainter */
+
+/* ── Sidebar ── */
+QFrame#sidePanel {
+    background-color: #101010;
+    border-right: 1px solid #1E1E1E;
+}
+
+QLabel#workspaceSubtitle {
+    color: #444444;
+    font-size: 11px;
+    padding-left: 2px;
+}
+
+QLabel#repoBadge {
+    color: #111111;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: #E2E2E2;
+    padding: 1px 6px;
+}
+
+QFrame#sidebarSeparator {
+    background-color: #1E1E1E;
+    max-height: 1px;
+    min-height: 1px;
+    margin: 4px 0px;
+}
+
+/* ── Buttons — Base (Ghost Style) ── */
+QPushButton {
+    background-color: transparent;
+    color: #AAAAAA;
+    border: 1px solid transparent;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: 400;
+    text-align: left;
+    border-radius: 0px;
+}
+QPushButton:hover {
+    background-color: #1E1E1E;
+    color: #EEEEEE;
+    border: 1px solid #262626;
+}
+QPushButton:pressed {
+    background-color: #181818;
+    color: #AAAAAA;
+}
+QPushButton:disabled {
+    color: #333333;
+    background-color: transparent;
+    border-color: transparent;
+}
+
+/* Primary CTA (Load Directory) */
+QPushButton#primaryAction {
+    background-color: #E2E2E2;
+    color: #111111;
+    border: 1px solid #CCCCCC;
+    font-weight: 600;
+    padding: 8px 12px;
+}
+QPushButton#primaryAction:hover {
+    background-color: #F0F0F0;
+    border-color: #DDDDDD;
+    color: #000000;
+}
+QPushButton#primaryAction:pressed {
+    background-color: #C8C8C8;
+    color: #111111;
+}
+QPushButton#primaryAction:disabled {
+    background-color: #282828;
+    color: #484848;
+    border-color: #282828;
+}
+
+/* Danger Button (Aggressive Clean) */
+QPushButton#dangerAction {
+    color: #F85149;
+    border: 1px solid transparent;
+}
+QPushButton#dangerAction:hover {
+    background-color: #200E0E;
+    border-color: #3A1010;
+    color: #FF6B6B;
+}
+
+/* ── Center Panel ── */
+QFrame#centerPanel {
+    background-color: #161616;
+}
+
+/* ── Workspace Header ── */
+QLabel#workspaceTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: #EEEEEE;
+}
+
+/* ── Tree View ── */
+QTreeView {
+    background-color: #161616;
+    border: none;
+    outline: none;
+    color: #BBBBBB;
+    selection-background-color: transparent;
+    show-decoration-selected: 1;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 13px;
+}
+
+QTreeView::item {
+    height: 36px;
+    padding-left: 4px;
+    border-bottom: 1px solid #1A1A1A;
+    color: #BBBBBB;
+}
+
+QTreeView::item:hover {
+    background-color: #1C1C1C;
+    color: #EEEEEE;
+}
+
+QTreeView::item:selected {
+    background-color: #222222;
+    color: #EEEEEE;
+    border-left: 2px solid #E2E2E2;
+}
+
+QTreeView::item:selected:hover {
+    background-color: #282828;
+}
+
+/* ── Branch / Hierarchy Indicators ── */
+QTreeView::branch {
+    background-color: transparent;
+}
+
+/* Hide indicators for top-level items (level 0) per 'clean' design */
+/* We rely on single-click to expand root groups */
+QTreeView#workspaceTree::branch:has-siblings:!adjoins-item,
+QTreeView#workspaceTree::branch:has-children:!has-siblings:!adjoins-item {
+    image: none;
+}
+
+/* Indicators for nested items (level > 0) */
+/* Closed state */
+QTreeView::branch:has-children:closed:adjoins-item,
+QTreeView::branch:closed:has-children:has-siblings {
+    image: none; /* We use the folder icon + root single click */
+}
+
+/* Open state */
+QTreeView::branch:open:has-children:adjoins-item,
+QTreeView::branch:open:has-children:has-siblings {
+    image: none;
+}
+
+/* Indicators for nested items (level > 0) */
+QTreeView#workspaceTree::branch:has-children:adjoins-item:closed {
+    image: url({ICONS_PATH}/chevron-right.svg);
+}
+
+QTreeView#workspaceTree::branch:has-children:adjoins-item:open {
+    image: url({ICONS_PATH}/chevron-down.svg);
+}
+
+/* Ensure no other branch state shows an additional image */
+QTreeView#workspaceTree::branch:!has-children {
+    image: none;
+}
+
+/* Remove all vertical/horizontal lines for a cleaner professional look */
+QTreeView::branch:has-siblings:!adjoins-item {
+    border-image: none;
+}
+QTreeView::branch:has-siblings:adjoins-item {
+    border-image: none;
+}
+QTreeView::branch:!has-children:!has-siblings:adjoins-item {
+    border-image: none;
+}
+QTreeView::branch:has-children:!has-siblings:adjoins-item {
+    border-image: none;
+}
+QTreeView::branch:has-indentation {
+    background-color: transparent;
+}
+
+/* ── Tree Header ── */
+QHeaderView {
+    background-color: #0E0E0E;
+    border-bottom: 1px solid #1E1E1E;
+}
+
+QHeaderView::section {
+    background-color: #0E0E0E;
+    color: #444444;
+    font-family: "JetBrains Mono";
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 0px 12px;
+    border: none;
+    border-right: 1px solid #181818;
+    border-bottom: 1px solid #1E1E1E;
+    height: 30px;
+}
+
+QHeaderView::section:last {
+    border-right: none;
+}
+
+/* ── Status Bar ── */
+QFrame#statusBar {
+    background-color: #0E0E0E;
+    border-top: 1px solid #1E1E1E;
+    min-height: 28px;
+    max-height: 28px;
+}
+
+/* ── Scrollbars (Thin, macOS-style) ── */
+QScrollBar:vertical {
+    border: none;
+    background: transparent;
+    width: 6px;
+    margin: 0px;
+}
+QScrollBar::handle:vertical {
+    background: #2A2A2A;
+    min-height: 30px;
+    border-radius: 0px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #373737;
+}
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+QScrollBar:horizontal {
+    border: none;
+    background: transparent;
+    height: 6px;
+}
+QScrollBar::handle:horizontal {
+    background: #2A2A2A;
+    min-width: 30px;
+}
+QScrollBar::handle:horizontal:hover {
+    background: #373737;
+}
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+/* ── QInputDialog / QMessageBox ── */
+QInputDialog, QMessageBox {
+    background-color: #141414;
+    color: #EEEEEE;
+    border: 1px solid #262626;
+}
+QInputDialog QLabel, QMessageBox QLabel {
+    color: #BBBBBB;
+    font-size: 13px;
+}
+QInputDialog QLineEdit {
+    background-color: #1E1E1E;
+    color: #EEEEEE;
+    border: 1px solid #2A2A2A;
+    padding: 6px 8px;
+    selection-background-color: #E2E2E2;
+    selection-color: #111111;
+}
+QInputDialog QLineEdit:focus {
+    border: 1px solid #E2E2E2;
+}
+
+/* ── QMenu (Context Menu) ── */
+QMenu {
+    background-color: #141414;
+    color: #EEEEEE;
+    border: 1px solid #262626;
+    padding: 4px 0px;
+    font-size: 13px;
+}
+QMenu::item {
+    padding: 7px 20px 7px 12px;
+    background-color: transparent;
+}
+QMenu::item:selected {
+    background-color: #1E1E1E;
+    color: #EEEEEE;
+}
+QMenu::separator {
+    height: 1px;
+    background-color: #1E1E1E;
+    margin: 4px 0px;
+}
+
+/* ── SizeGrip ── */
+QSizeGrip {
+    background: transparent;
+    width: 12px;
+    height: 12px;
+}
