@@ -7,7 +7,7 @@ if (Test-Path "$ProjectRoot\build") { Remove-Item -Recurse -Force "$ProjectRoot\
 if (Test-Path "$ProjectRoot\dist\App_GUI") { Remove-Item -Recurse -Force "$ProjectRoot\dist\App_GUI" }
 
 # 2. Ejecutar PyInstaller con todas las dependencias visuales
-pyinstaller --noconsole --onedir --name "GitBulk" `
+python -m PyInstaller --noconsole --onedir --name "GitBulk" `
     --distpath "$ProjectRoot\dist\App_GUI" `
     --icon "$ProjectRoot\assets\gitbulk.ico" `
     --add-data "$ProjectRoot\assets;assets" `
