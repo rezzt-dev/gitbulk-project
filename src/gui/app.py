@@ -34,13 +34,13 @@ def _set_taskbar_icon():
             pass
 
 
-def _resolve_base():
-    """Returns the base path for bundled assets (works both dev and PyInstaller)."""
+def _resolve_resource(relative_path: str) -> str:
+    """Returns the absolute path to a resource, works for dev and PyInstaller."""
     if getattr(sys, 'frozen', False):
-        # Running as compiled .exe — PyInstaller extracts to _MEIPASS
-        return sys._MEIPASS
-    # Running as script — project root is two levels up from this file
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        return os.path.join(sys._MEIPASS, relative_path)
+    # dev: project root is two levels up from this file
+    base = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+    return os.path.join(base, relative_path)
 
 
 def run_gui():
@@ -49,8 +49,17 @@ def run_gui():
     """
     _set_taskbar_icon()
 
+<<<<<<< Updated upstream
     # ── High Fidelity Typography & DPI Handling
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+=======
+    # ── DPI Handling (MUST be before QApplication)
+    if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    
+>>>>>>> Stashed changes
     if hasattr(QApplication, 'setHighDpiScaleFactorRoundingPolicy'):
         QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
@@ -63,23 +72,30 @@ def run_gui():
     font.setHintingPreference(QFont.PreferNoHinting) # Allow OS ClearType to handle smoothing
     app.setFont(font)
 
-    # ── App icon: prefer .ico (native Windows multi-size), fallback to .svg
-    base    = _resolve_base()
-    ico_path = os.path.join(base, "assets", "gitbulk.ico")
-    svg_path = os.path.join(os.path.dirname(__file__), "icons", "gitbulk_icon.svg")
+    # ── App icon
+    ico_path = _resolve_resource(os.path.join("assets", "gitbulk.ico"))
+    svg_path = _resolve_resource(os.path.join("src", "gui", "icons", "gitbulk_icon.svg"))
     icon_path = ico_path if os.path.exists(ico_path) else svg_path
     icon_path = resource_path(os.path.join("assets", "gitbulk.ico"))
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
 
+<<<<<<< Updated upstream
     # ── QSS Theme (also resolves for both dev and PyInstaller)
     theme_path = resource_path(os.path.join("gui", "theme.qss"))
+=======
+    # ── QSS Theme
+    theme_path = _resolve_resource(os.path.join("src", "gui", "theme.qss"))
+
+>>>>>>> Stashed changes
     if os.path.exists(theme_path):
         with open(theme_path, "r", encoding="utf-8") as f:
             qss_content = f.read()
-            # Dynamically fix icon paths based on whether we are in src/ or frozen
-            icons_abs = os.path.join(os.path.dirname(theme_path), "icons").replace("\\", "/")
-            qss_content = qss_content.replace("{ICONS_PATH}", icons_abs)
+            # Dynamically fix icon paths
+            icons_abs = os.path.dirname(theme_path).replace("\\", "/")
+            # Also handle if icons are in a subfolder relative to theme
+            icons_dir = os.path.join(icons_abs, "icons").replace("\\", "/")
+            qss_content = qss_content.replace("{ICONS_PATH}", icons_dir)
             app.setStyleSheet(qss_content)
 
     try:

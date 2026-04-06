@@ -1,10 +1,10 @@
 # GitBulk Project
 
-Una herramienta profesional de línea de comandos (CLI) escrita en Python para gestionar y actualizar múltiples repositorios Git de forma masiva y concurrente.
+Una herramienta profesional de línea de comandos (CLI) e interfaz gráfica (GUI) nativa escrita en Python para gestionar y actualizar múltiples repositorios Git de forma masiva y concurrente.
 
 > **Documentación del Proyecto:** Consulta guías de instalación, arquitecturas y uso avanzado en el manual oficial: [Español (ES)](project-doc/es-project-doc.md) | [English (EN)](project-doc/en-project-doc.md).
 
-En lugar de ir carpeta por carpeta ejecutando comandos, **GitBulk** busca recursivamente todos los repositorios en una ruta específica y ejecuta operaciones de forma silenciosa en paralelo (ej. `fetch`, `checkout`, `clean`), reduciendo drásticamente el tiempo de espera.
+En lugar de ir carpeta por carpeta ejecutando comandos, **GitBulk** busca recursivamente todos los repositorios en una ruta específica y ejecuta operaciones de forma silenciosa en paralelo (ej. `fetch`, `checkout`, `clean`), reduciendo drásticamente el tiempo de espera. Ahora también disponible con una **Interfaz Gráfica de alta fidelidad** para Linux.
 
 ---
 
@@ -29,14 +29,25 @@ Binario ligero sin interfaz gráfica para uso puro en terminal.
 ```powershell
 iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1" | iex
 ```
+<<<<<<< Updated upstream
 
 **Linux / macOS (Bash):**
 
+=======
+#### Linux / macOS (CLI)
+>>>>>>> Stashed changes
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.sh" | bash
 ```
 
+#### Linux (Interfaz Gráfica - GUI)
+Para instalar la aplicación de escritorio nativa con integración en el sistema:
+```bash
+curl -sSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install_linux.sh" | bash
+```
+
 ---
+<<<<<<< Updated upstream
 
 ## Caracteristicas Principales
 
@@ -44,6 +55,14 @@ curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dis
 - **Memoria de Sesion (Persistencia):** recuerda automaticamente el ultimo directorio analizado para que no tengas que escribir la ruta cada vez.
 - **Interfaz Visual Clara:** salida en terminal formateada con colores (exitos en verde, errores en rojo) y resumen final de operaciones.
 - **Arquitectura Limpia:** construido bajo principios de separacion de responsabilidades (modelo, vista, persistencia).
+=======
+### Caracteristicas Principales
+  - **Interfaz Gráfica Nativa:** Nueva aplicación de escritorio para Linux con diseño moderno, modo oscuro y notificaciones visuales.
+  - **Ejecuccion Concurrente:** utiliza multiples hilos (`ThreadPoolExecutor`) para procesar varios repositorios al mismo tiempo.
+ - **Memoria de Sesion (Persistencia):** recuerda automaticamente el ultimo directorio analizado para que no tengas que escribir la ruta cada vez.
+ - **Interfaz Visual Clara:** salida en terminal formateada con colores (exitos en verde, errores en rojo) y resumen final de operaciones.
+ - **Arquitectura Limpia:** construido bajo principios de separacion de responsabilidades (modelo, vista, persistencia).
+>>>>>>> Stashed changes
 
 ---
 
