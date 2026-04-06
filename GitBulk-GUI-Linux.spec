@@ -5,7 +5,7 @@ a = Analysis(
     ['src/main.py'],
     pathex=['src'],
     binaries=[],
-    datas=[('assets', 'assets'), ('src/gui', 'gui'), ('src/gui/icons', 'src/gui/icons'), ('src/gui/theme.qss', 'src/gui/theme.qss')],
+    datas=[('assets', 'assets'), ('src/gui', 'src/gui')],
     hiddenimports=['PySide6.QtSvg', 'PySide6.QtSvgWidgets', 'PySide6.QtXml', 'PySide6.QtWidgets', 'PySide6.QtGui', 'gui.translations', 'gui.icon_manager'],
     hookspath=[],
     hooksconfig={},
