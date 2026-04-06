@@ -55,7 +55,13 @@ def main():
     if "--gui" in sys.argv:
         sys.argv.remove("--gui")
     
-    from gui.app import run_gui
+    try:
+        from gui.app import run_gui
+    except ImportError:
+        # Fallback for some bundle configurations
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'gui')))
+        from app import run_gui
+    
     sys.exit(run_gui())
 
   os.system("")

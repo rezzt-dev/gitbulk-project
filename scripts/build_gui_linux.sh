@@ -24,11 +24,14 @@ pyinstaller --noconfirm --onefile --windowed \
     --name "GitBulk-GUI-Linux" \
     --paths "src" \
     --add-data "assets:assets" \
+    --add-data "src/gui:gui" \
     --add-data "src/gui/icons:src/gui/icons" \
     --add-data "src/gui/theme.qss:src/gui/theme.qss" \
     --hidden-import "PySide6.QtSvg" \
     --hidden-import "PySide6.QtSvgWidgets" \
     --hidden-import "PySide6.QtXml" \
+    --hidden-import "PySide6.QtWidgets" \
+    --hidden-import "PySide6.QtGui" \
     --hidden-import "gui.translations" \
     --hidden-import "gui.icon_manager" \
     "src/main.py"
