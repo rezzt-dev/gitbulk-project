@@ -16,11 +16,22 @@ if (-not $IsAdmin) {
     exit
 }
 
-# 2. Verificar existencia de los archivos de build
+# 2. Verificar existencia de los archivos de build (o clonar desde GitHub si es Web-Installer)
 if (-not (Test-Path $SourcePath)) {
-    Write-Host "[ERROR] No se encuentran los archivos en $SourcePath." -ForegroundColor Red
-    Write-Host "[TIP] Ejecuta .\build_gui.ps1 desde el directorio raíz." -ForegroundColor Gray
-    exit
+    Write-Host "[MSG] No se detectan archivos locales. Iniciando descarga desde GitHub..." -ForegroundColor Yellow
+    $TempDownload = Join-Path $env:TEMP "gitbulk_webinstall_$(Get-Random)"
+    git clone https://github.com/rezzt-dev/gitbulk-project.git $TempDownload
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] No se pudo clonar el repositorio. Verifica tu conexión y 'git'." -ForegroundColor Red
+        exit
+    }
+    # Redefinimos SourcePath hacia la descarga temporal
+    $SourcePath = "$TempDownload\dist\App_GUI\GitBulk"
+    if (-not (Test-Path $SourcePath)) {
+        Write-Host "[ERROR] El repositorio no contiene los binarios en la ruta esperada." -ForegroundColor Red
+        Remove-Item -Recurse -Force $TempDownload
+        exit
+    }
 }
 
 # 3. Crear directorio de instalación y desplegar
