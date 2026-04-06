@@ -10,11 +10,27 @@ $ExeName = "GitBulk-GUI-Windows.exe"
 $InstallFolder = "$env:ProgramFiles\$AppName"
 $ReleaseUrl = "https://github.com/rezzt-dev/gitbulk-project/releases/download/$Version/$ExeName"
 
-# 1. Elevación de Privilegios
+# 1. Elevación de Privilegios (Robust Web-Installer Support)
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "[!] Solicitando permisos de administrador..." -ForegroundColor Yellow
-    Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    
+    $ScriptPath = ""
+    if ($PSCommandPath) {
+        $ScriptPath = $PSCommandPath
+    } else {
+        # IEX mode: We must download to a temp file to allow Start-Process -File
+        $ScriptPath = Join-Path $env:TEMP "GitBulk_GUI_Installer.ps1"
+        $RemoteUrl = "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1"
+        Invoke-WebRequest -Uri $RemoteUrl -OutFile $ScriptPath -ErrorAction SilentlyContinue
+    }
+
+    if (Test-Path $ScriptPath) {
+        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -Verb RunAs
+    } else {
+        Write-Host "[ERROR] No se pudo localizar el archivo de instalación para elevar privilegios." -ForegroundColor Red
+        Write-Host "Por favor, ejecuta PowerShell como administrador e intenta de nuevo." -ForegroundColor White
+    }
     exit
 }
 

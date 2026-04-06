@@ -65,8 +65,9 @@ git_manager_pro/
 
 ## Requisitos
 
-- **Python 3.7+** (no requiere librerias externas de terceros).
 - **Git** instalado y accesible desde la variable de entorno PATH del sistema.
+- **Windows (GUI/Desktop):** No requiere Python preinstalado (versión autónoma).
+- **CLI / Desarrollo:** Requiere **Python 3.7+**.
 
 ---
 
@@ -120,5 +121,9 @@ la primera vez que ejecutas el programa, se crea un archivo de configuracion ocu
 
 con esto, tu proyecto no solo tiene un codigo de primera categoria, sino tambien una documentacion que lo respalda. cualquier desarrollador que vea tu repositorio de GitHub (o donde decidas guardarlo) entendera al instante como esta construido y como usarlo.
 
-para ponerle la guinda al pastel, ¿quieres que te enseñe como empaquetar todo este proyecto en un **único archivo `.exe`** (usando `PyInstaller`) para que puedas usarlo como un comando nativo de tu sistema sin tener que invocar a Python?
+---
+
+**GitBulk** es una herramienta de código abierto. Siéntete libre de contribuir o reportar errores en el repositorio oficial.
+
+*Desarrollado con ❤️ por rezzt-dev.*
 

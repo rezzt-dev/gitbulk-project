@@ -1,100 +1,64 @@
-$Host.UI.RawUI.WindowTitle = "Instalador de gitbulk"
-Write-Host "Iniciando instalacion de gitbulk CLI..." -ForegroundColor Cyan
+# GitBulk CLI - Instalador Web Oficial para Windows
+# ======================================================
+# Versión: 1.3.0
+# Comando: iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1" | iex
 
-# 1. Comprobar dependencias (git y python)
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
-    Write-Host "Error: No se ha encontrado 'git'. Por favor, instálalo antes de continuar." -ForegroundColor Red
-    exit 1
+$AppName = "GitBulk-CLI"
+$ExecutableBaseName = "gitbulk"
+$Version = "v1.3.0"
+$ExeName = "GitBulk-CLI-Windows.exe"
+$InstallFolder = "$env:USERPROFILE\.gitbulk"
+$ReleaseUrl = "https://github.com/rezzt-dev/gitbulk-project/releases/download/$Version/$ExeName"
+
+# 1. Elevación de Privilegios (Robust Web-Installer Support)
+$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "[!] Solicitando permisos de administrador para configuración de sistema..." -ForegroundColor Yellow
+    
+    $ScriptPath = ""
+    if ($PSCommandPath) {
+        $ScriptPath = $PSCommandPath
+    } else {
+        $ScriptPath = Join-Path $env:TEMP "GitBulk_CLI_Installer.ps1"
+        $RemoteUrl = "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1"
+        Invoke-WebRequest -Uri $RemoteUrl -OutFile $ScriptPath -ErrorAction SilentlyContinue
+    }
+
+    if (Test-Path $ScriptPath) {
+        Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" -Verb RunAs
+    } else {
+        Write-Host "[ERROR] No se pudo localizar el instalador para elevar privilegios." -ForegroundColor Red
+    }
+    exit
 }
 
-$pythonCmd = ""
-if (Get-Command python3 -ErrorAction SilentlyContinue) {
-    $pythonCmd = "python3"
-} elseif (Get-Command py -ErrorAction SilentlyContinue) {
-    $pythonCmd = "py" # Utilidad de entorno de windows py launcher
-} elseif (Get-Command python -ErrorAction SilentlyContinue) {
-    $pythonCmd = "python"
-} else {
-    Write-Host "Error: No se ha encontrado 'python' o 'py'. Por favor, instálalo antes de continuar." -ForegroundColor Red
-    exit 1
+Write-Host "`n--- Instalando GitBulk CLI ($Version) ---" -ForegroundColor Cyan
+
+# 2. Preparar Carpeta
+if (-not (Test-Path $InstallFolder)) {
+    New-Item -ItemType Directory -Path $InstallFolder | Out-Null
 }
 
-# 2. Configurar variables para Windows
-$targetFolder = "$env:USERPROFILE\.gitbulk"
-$exePath = "$targetFolder\gitbulk.exe"
-$specFile = "gitbulk.spec"
-$distPath = "dist\gitbulk.exe"
-$venvPython = "venv\Scripts\python.exe"
-$venvPip = "venv\Scripts\pip.exe"
-$venvPyinstaller = "venv\Scripts\pyinstaller.exe"
+# 3. Descarga de Binario
+Write-Host "[1/3] Descargando binario desde GitHub..." -ForegroundColor Gray
+$TempExe = Join-Path $env:TEMP $ExeName
+Invoke-WebRequest -Uri $ReleaseUrl -OutFile $TempExe -ErrorAction Stop
 
-# Crear carpeta de destino si no existe
-if (-not (Test-Path -Path $targetFolder)) {
-    New-Item -ItemType Directory -Path $targetFolder | Out-Null
-}
+# 4. Instalación
+Write-Host "[2/3] Instalando en carpeta de usuario..." -ForegroundColor Gray
+Move-Item -Path $TempExe -Destination "$InstallFolder\$ExecutableBaseName.exe" -Force
 
-$tempDir = Join-Path ([System.IO.Path]::GetTempPath()) "gitbulk_src_$(Get-Random)"
-
-Write-Host "Descargando todo el codigo fuente..." -ForegroundColor Yellow
-git clone https://github.com/rezzt-dev/gitbulk-project.git $tempDir
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: Falló la clonación del repositorio remoto." -ForegroundColor Red
-    exit 1
-}
-
-Push-Location $tempDir
-
-Write-Host "Creando entorno virtual (venv)..." -ForegroundColor Yellow
-& $pythonCmd -m venv venv
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: No se pudo crear el entorno virtual. Verifica tu instalación de Python." -ForegroundColor Red
-    Pop-Location
-    Remove-Item -Recurse -Force $tempDir
-    exit 1
-}
-
-Write-Host "Instalando dependencias en el entorno virtual..." -ForegroundColor Yellow
-& $venvPip install -r requirements.txt pyinstaller
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error: Falló la instalación de dependencias." -ForegroundColor Red
-    Pop-Location
-    Remove-Item -Recurse -Force $tempDir
-    exit 1
-}
-
-Write-Host "Compilando el ejecutable localmente..." -ForegroundColor Yellow
-& $venvPyinstaller $specFile --clean
-
-if (-not (Test-Path $distPath)) {
-    Write-Host "Error: Falló la compilación local." -ForegroundColor Red
-    Pop-Location
-    Remove-Item -Recurse -Force $tempDir
-    exit 1
-}
-
-Write-Host "Moviendo el ejecutable a la ruta final..." -ForegroundColor Yellow
-Copy-Item -Path $distPath -Destination $exePath -Force
-
-Write-Host "Ok: Limpieza terminada e instalacion exitosa." -ForegroundColor Green
-
-Pop-Location
-Remove-Item -Recurse -Force $tempDir
-
-# Configurar variables de entorno
-Write-Host "Configurando variables de entorno..." -ForegroundColor Yellow
-
-# Modificar el PATH del usuario de Windows
+# 5. Configuración de PATH
+Write-Host "[3/3] Configurando variables de entorno (PATH)..." -ForegroundColor Gray
 $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if ($userPath -notmatch [regex]::Escape($targetFolder)) {
-    $newPath = if ($userPath) { "$userPath;$targetFolder" } else { $targetFolder }
+if ($userPath -notmatch [regex]::Escape($InstallFolder)) {
+    $newPath = if ($userPath) { "$userPath;$InstallFolder" } else { $InstallFolder }
     [Environment]::SetEnvironmentVariable("Path", $newPath, "User")
-    Write-Host "Ok: gitbulk añadido al PATH correctamente." -ForegroundColor Green
-} else {
-    Write-Host "Ok: gitbulk ya estaba configurado en el PATH." -ForegroundColor DarkGreen
 }
 
 Write-Host "`n=========================================" -ForegroundColor Cyan
-Write-Host "  ¡Instalacion completada con exito!     " -ForegroundColor Green
+Write-Host "  ¡Instalación CLI completada con éxito! " -ForegroundColor Green
 Write-Host "=========================================" -ForegroundColor Cyan
-Write-Host "Por favor, cierra esta terminal y abre una nueva."
-Write-Host "Luego simplemente escribe: gitbulk --help"
+Write-Host "Cierra esta terminal y abre una nueva para empezar."
+Write-Host "Comando: gitbulk --help"
+Read-Host "`nPresiona Enter para finalizar..."
