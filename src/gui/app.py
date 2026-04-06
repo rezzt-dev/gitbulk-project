@@ -5,6 +5,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QFont
 from .main_window import MainWindow
 
+def resource_path(relative_path: str) -> str:
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    return os.path.join(base_path, relative_path)
+
 try:
     from persistence import load_config
 except ImportError:
@@ -41,13 +49,12 @@ def run_gui():
     """
     _set_taskbar_icon()
 
-    app = QApplication(sys.argv)
-    
     # ── High Fidelity Typography & DPI Handling
-    app.setAttribute(Qt.AA_UseHighDpiPixmaps)
-    
-    if hasattr(app, 'setHighDpiScaleFactorRoundingPolicy'):
-        app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    if hasattr(QApplication, 'setHighDpiScaleFactorRoundingPolicy'):
+        QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+
+    app = QApplication(sys.argv)
     
     # ── Master Font Setup (Clean, Non-Pixelated Strategy)
     font = QFont("JetBrains Mono")
@@ -61,14 +68,12 @@ def run_gui():
     ico_path = os.path.join(base, "assets", "gitbulk.ico")
     svg_path = os.path.join(os.path.dirname(__file__), "icons", "gitbulk_icon.svg")
     icon_path = ico_path if os.path.exists(ico_path) else svg_path
+    icon_path = resource_path(os.path.join("assets", "gitbulk.ico"))
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
 
     # ── QSS Theme (also resolves for both dev and PyInstaller)
-    theme_path = os.path.join(base, "gui", "theme.qss")
-    if not os.path.exists(theme_path):
-        theme_path = os.path.join(os.path.dirname(__file__), "theme.qss")
-
+    theme_path = resource_path(os.path.join("gui", "theme.qss"))
     if os.path.exists(theme_path):
         with open(theme_path, "r", encoding="utf-8") as f:
             qss_content = f.read()

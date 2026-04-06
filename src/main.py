@@ -38,17 +38,23 @@ from view import (
 from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches, get_github_token, get_ci_status
 
 def main():
-  if "--gui" in sys.argv:
+  # Si se pasa explícitamente --gui, o si estamos en un ejecutable compilado y NO se pasan otros argumentos
+  is_frozen = getattr(sys, 'frozen', False)
+  is_gui_mode = "--gui" in sys.argv or (is_frozen and len(sys.argv) == 1)
+
+  if is_gui_mode:
     try:
       import PySide6
     except ImportError:
-      print("\n[ERROR] PySide6 is not installed. Please run 'pip install PySide6' or update from requirements.txt")
+      if is_frozen:
+        print("\n[FATAL ERROR] PySide6 core is missing in bundle.")
+      else:
+        print("\n[ERROR] PySide6 is not installed. Please run 'pip install PySide6'")
       sys.exit(1)
     
-    # Remove --gui from sys.argv so other internal parsing won't complain if strictly checked
-    sys.argv.remove("--gui")
+    if "--gui" in sys.argv:
+        sys.argv.remove("--gui")
     
-    # Launch PySide6 app
     from gui.app import run_gui
     sys.exit(run_gui())
 
@@ -375,4 +381,9 @@ if __name__ == "__main__":
     main()
   except KeyboardInterrupt:
     console.print("\n\nOperation cancelled by user.")
+    sys.exit(0)
+  except Exception as e:
+    import traceback
+    # Si falla en modo GUI, podemos imprimir pero sin esperar input (el usuario no tiene consola)
+    traceback.print_exc()
     sys.exit(1)

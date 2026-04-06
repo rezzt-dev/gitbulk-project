@@ -14,15 +14,15 @@ Puedes instalar GitBulk directamente desde tu terminal utilizando los siguientes
 
 ### 🖥️ GitBulk Desktop (GUI + CLI) — Recomendado
 
-Ideal para usuarios de Windows que deseen la experiencia completa con interfaz gráfica, accesos directos e integración total en el sistema.
+Versión completa con interfaz gráfica, accesos directos e integración total en Windows.
 
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/Install-GitBulk.ps1" | iex
+iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1" | iex
 ```
 
 ### 💻 GitBulk CLI (Terminal Only)
 
-Para usuarios que prefieren únicamente la herramienta de línea de comandos o se encuentran en entornos sin servidor gráfico.
+Binario ligero sin interfaz gráfica para uso puro en terminal.
 
 **Windows (PowerShell):**
 
@@ -121,3 +121,4 @@ la primera vez que ejecutas el programa, se crea un archivo de configuracion ocu
 con esto, tu proyecto no solo tiene un codigo de primera categoria, sino tambien una documentacion que lo respalda. cualquier desarrollador que vea tu repositorio de GitHub (o donde decidas guardarlo) entendera al instante como esta construido y como usarlo.
 
 para ponerle la guinda al pastel, ¿quieres que te enseñe como empaquetar todo este proyecto en un **único archivo `.exe`** (usando `PyInstaller`) para que puedas usarlo como un comando nativo de tu sistema sin tener que invocar a Python?
+

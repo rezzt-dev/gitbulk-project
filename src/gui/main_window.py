@@ -10,11 +10,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QRect, QRectF, QPointF, QSize, QModelIndex, QTimer
 from PySide6.QtGui import QIcon, QPainter, QPen, QColor, QStandardItemModel, QStandardItem, QFont, QFontDatabase
+# Robust local imports for PyInstaller/Dev
 try:
-    from .translations import TR, set_language, get_current_language, LANGUAGES
-except ImportError:
-    # Fallback if not inside package
-    from translations import TR, set_language, get_current_language, LANGUAGES
+    from gui.translations import TR, set_language, get_current_language, LANGUAGES
+except (ImportError, ModuleNotFoundError):
+    try:
+        from .translations import TR, set_language, get_current_language, LANGUAGES
+    except (ImportError, ModuleNotFoundError):
+        from translations import TR, set_language, get_current_language, LANGUAGES
 
 try:
     from persistence import load_config, save_config
