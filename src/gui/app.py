@@ -50,16 +50,18 @@ def run_gui():
     _set_taskbar_icon()
 
 <<<<<<< Updated upstream
-    # ── High Fidelity Typography & DPI Handling
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
-=======
+def run_gui():
+    """
+    Initializes and starts the PySide6 Application.
+    """
+    _set_taskbar_icon()
+
     # ── DPI Handling (MUST be before QApplication)
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
         QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
     
->>>>>>> Stashed changes
     if hasattr(QApplication, 'setHighDpiScaleFactorRoundingPolicy'):
         QApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 
@@ -76,18 +78,12 @@ def run_gui():
     ico_path = _resolve_resource(os.path.join("assets", "gitbulk.ico"))
     svg_path = _resolve_resource(os.path.join("src", "gui", "icons", "gitbulk_icon.svg"))
     icon_path = ico_path if os.path.exists(ico_path) else svg_path
-    icon_path = resource_path(os.path.join("assets", "gitbulk.ico"))
     if os.path.exists(icon_path):
         app.setWindowIcon(QIcon(icon_path))
 
-<<<<<<< Updated upstream
-    # ── QSS Theme (also resolves for both dev and PyInstaller)
-    theme_path = resource_path(os.path.join("gui", "theme.qss"))
-=======
     # ── QSS Theme
     theme_path = _resolve_resource(os.path.join("src", "gui", "theme.qss"))
 
->>>>>>> Stashed changes
     if os.path.exists(theme_path):
         with open(theme_path, "r", encoding="utf-8") as f:
             qss_content = f.read()

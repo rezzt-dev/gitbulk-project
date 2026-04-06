@@ -23,13 +23,7 @@ def get_icon(icon_name: str, color: str = "#EEEEEE", size: int = 16) -> QIcon:
     """
     Loads an SVG from the icons folder, injects a color dynamically, and returns a QIcon.
     """
-<<<<<<< Updated upstream
-    # The --add-data in build_gui.ps1 uses: "src/gui/icons;gui/icons"
-    # So the icons folder is at gui/icons relative to the app root (_MEIPASS)
-    icon_path = resource_path(os.path.join("gui", "icons", f"{icon_name}.svg"))
-=======
     icon_path = resource_path(os.path.join("src", "gui", "icons", f"{icon_name}.svg"))
->>>>>>> Stashed changes
     
     if not os.path.exists(icon_path):
         return QIcon()

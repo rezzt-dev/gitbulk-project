@@ -38,21 +38,11 @@ from view import (
 from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches, get_github_token, get_ci_status
 
 def main():
-<<<<<<< Updated upstream
-  # Si se pasa explícitamente --gui, o si estamos en un ejecutable compilado y NO se pasan otros argumentos
+  # Auto-launch GUI if frozen (PyInstaller) and no arguments
   is_frozen = getattr(sys, 'frozen', False)
   is_gui_mode = "--gui" in sys.argv or (is_frozen and len(sys.argv) == 1)
 
   if is_gui_mode:
-=======
-  # Auto-launch GUI if frozen (PyInstaller) and no arguments
-  is_frozen = getattr(sys, 'frozen', False)
-  if is_frozen and len(sys.argv) == 1:
-    from gui.app import run_gui
-    sys.exit(run_gui())
-
-  if "--gui" in sys.argv:
->>>>>>> Stashed changes
     try:
       import PySide6
     except ImportError:
