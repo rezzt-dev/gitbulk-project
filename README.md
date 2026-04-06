@@ -4,145 +4,114 @@ Una herramienta profesional de línea de comandos (CLI) e interfaz gráfica (GUI
 
 > **Documentación del Proyecto:** Consulta guías de instalación, arquitecturas y uso avanzado en el manual oficial: [Español (ES)](project-doc/es-project-doc.md) | [English (EN)](project-doc/en-project-doc.md).
 
-En lugar de ir carpeta por carpeta ejecutando comandos, **GitBulk** busca recursivamente todos los repositorios en una ruta específica y ejecuta operaciones de forma silenciosa en paralelo (ej. `fetch`, `checkout`, `clean`), reduciendo drásticamente el tiempo de espera. Ahora también disponible con una **Interfaz Gráfica de alta fidelidad** para Linux.
+En lugar de procesar directorios de forma secuencial, **GitBulk** localiza recursivamente todos los repositorios en una ruta específica y ejecuta operaciones de forma concurrente en paralelo (ej. `fetch`, `pull`, `checkout`), reduciendo drásticamente los tiempos de ejecución en entornos con gran volumen de proyectos.
 
 ---
 
-## 🚀 Instalación del Proyecto
+## Instalación del Proyecto
 
-Puedes instalar GitBulk directamente desde tu terminal utilizando los siguientes comandos oficiales:
+GitBulk puede instalarse directamente desde la terminal utilizando los siguientes comandos oficiales:
 
-### 🖥️ GitBulk Desktop (GUI + CLI) — Recomendado
+### GitBulk Desktop (GUI + CLI) - Recomendado
 
-Versión completa con interfaz gráfica, accesos directos e integración total en Windows.
+Versión completa con interfaz gráfica, accesos directos e integración total en el sistema operativo.
 
+**Windows (PowerShell):**
 ```powershell
 iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1" | iex
 ```
 
-### 💻 GitBulk CLI (Terminal Only)
+**Linux (Bash):**
+```bash
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install_linux.sh" | bash
+```
 
-Binario ligero sin interfaz gráfica para uso puro en terminal.
+### GitBulk CLI (Terminal Only)
+
+Distribución ligera optimizada exclusivamente para entornos de terminal.
 
 **Windows (PowerShell):**
-
 ```powershell
 iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1" | iex
 ```
-<<<<<<< Updated upstream
 
 **Linux / macOS (Bash):**
-
-=======
-#### Linux / macOS (CLI)
->>>>>>> Stashed changes
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.sh" | bash
 ```
 
-#### Linux (Interfaz Gráfica - GUI)
-Para instalar la aplicación de escritorio nativa con integración en el sistema:
-```bash
-curl -sSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install_linux.sh" | bash
-```
-
 ---
-<<<<<<< Updated upstream
 
-## Caracteristicas Principales
+## Características Principales
 
-- **Ejecuccion Concurrente:** utiliza multiples hilos (`ThreadPoolExecutor`) para procesar varios repositorios al mismo tiempo.
-- **Memoria de Sesion (Persistencia):** recuerda automaticamente el ultimo directorio analizado para que no tengas que escribir la ruta cada vez.
-- **Interfaz Visual Clara:** salida en terminal formateada con colores (exitos en verde, errores en rojo) y resumen final de operaciones.
-- **Arquitectura Limpia:** construido bajo principios de separacion de responsabilidades (modelo, vista, persistencia).
-=======
-### Caracteristicas Principales
-  - **Interfaz Gráfica Nativa:** Nueva aplicación de escritorio para Linux con diseño moderno, modo oscuro y notificaciones visuales.
-  - **Ejecuccion Concurrente:** utiliza multiples hilos (`ThreadPoolExecutor`) para procesar varios repositorios al mismo tiempo.
- - **Memoria de Sesion (Persistencia):** recuerda automaticamente el ultimo directorio analizado para que no tengas que escribir la ruta cada vez.
- - **Interfaz Visual Clara:** salida en terminal formateada con colores (exitos en verde, errores en rojo) y resumen final de operaciones.
- - **Arquitectura Limpia:** construido bajo principios de separacion de responsabilidades (modelo, vista, persistencia).
->>>>>>> Stashed changes
+- **Interfaz Gráfica Nativa:** Aplicación de escritorio con diseño moderno, soporte para modo oscuro y retroalimentación visual en tiempo real.
+- **Ejecución Concurrente:** Utiliza un motor de hilos optimizado (`ThreadPoolExecutor`) para procesar múltiples repositorios simultáneamente.
+- **Persistencia de Sesión:** Sistema de gestión de configuración que preserva el estado del espacio de trabajo y las preferencias del usuario.
+- **Interfaz Visual Técnica:** Salida por consola formateada mediante la librería `rich`, proporcionando informes de estado precisos y códigos de color normalizados.
+- **Arquitectura Modular:** Basado en patrones de diseño que separan la lógica de negocio (Model) de la interacción con el usuario (View) y la persistencia de datos.
 
 ---
 
-## Estructura del Proyecto
+## Requisitos de Sistema
 
-el codigo esta organizado de forma modular para facilitar su mantenimiento y escalabilidad:
-
-```text
-git_manager_pro/
-├── README.md
-└── src/
-  ├── main.py        # Controlador: Conecta todas las capas.
-  ├── model/         # Lógica de negocio (búsqueda de repos, comandos git).
-  ├── persistence/   # Gestión de configuración de usuario (JSON).
-  └── view/          # Interfaz de usuario (parseo CLI y prints a color).
-```
+- **Git:** Debe estar instalado y accesible globalmente a través de la variable de entorno PATH.
+- **Windows (GUI/Desktop):** Distribución autónoma "One-File" (no requiere instalación previa de Python).
+- **Linux/macOS:** Requiere **Python 3.7+** para la ejecución de la versión CLI.
 
 ---
 
-## Requisitos
+## Guía de Uso (CLI)
 
-- **Git** instalado y accesible desde la variable de entorno PATH del sistema.
-- **Windows (GUI/Desktop):** No requiere Python preinstalado (versión autónoma).
-- **CLI / Desarrollo:** Requiere **Python 3.7+**.
-
----
-
-## Uso
-
-Abre tu terminal, sitúate en la carpeta raíz del proyecto y ejecuta el programa como un script.
+Ejecute la herramienta desde la terminal especificando la operación y los parámetros requeridos.
 
 ### Operaciones Disponibles
 
-GitBulk soporta comandos masivos para simplificar tu flujo de trabajo de cientos de repositorios en 1 clic:
-
-| Comando | Descripción |
+| Operación | Descripción |
 | :--- | :--- |
-| `fetch` | Ejecuta rutinas de actualización de origen remoto sin forzar cambios a la historia local. |
-| `pull` | Descarga de red los cambios sin retraso bajo formato libre de conflictos *fast-forward only*. |
-| `status` | Analiza cuántos commits adelantados, atrasados o archivos modificados hay sin revisar. |
-| `current-branch` | Genera de forma super-compacta una vista topográfica del árbol de ramas locales vs remotas. |
-| `export` | Compila un diccionario en JSON (Snapshot) extrayendo las rutas remotas exactas locales. |
-| `restore` | Reconstruye carpetas y clona infraestructura de software masiva analizando su matriz remota. |
-| `auth` | Automatiza el guardado de PAT tokens (Tokens de Acceso) de forma segura. |
+| `fetch` | Descarga metadatos del historial remoto sin integrar cambios locales. |
+| `pull` | Actualiza la rama activa aplicando una estrategia de integración `fast-forward only`. |
+| `status` | Analiza el estado del árbol de trabajo (archivos modificados, divergencia de commits). |
+| `current-branch` | Genera una topología compacta de las ramas locales frente a las referencias remotas. |
+| `checkout` | Realiza una transición masiva de HEAD hacia una rama objetivo (`-b branch`). |
+| `clean` | **[Operación Destructiva]** Prunea ramas remotas e inactiva y elimina archivos no rastreados. |
+| `ci-status` | Consulta el estado de ejecución de pipelines en GitHub Actions mediante tokens PAT. |
+| `export` | Genera un snapshot en formato JSON de la estructura de repositorios y orígenes. |
+| `restore` | Clona y reconstruye espacios de trabajo basándose en un archivo de snapshot JSON. |
+| `auth` | Gestiona de forma segura las credenciales y Personal Access Tokens (PAT) de GitHub. |
 
-### Argumentos Extendidos
+### Argumentos y Banderas
 
-| Flag / Bandera | Atajo | Descripción | Predeterminado |
+| Flag | Alias | Descripción | Valor por Defecto |
 | :--- | :--- | :--- | :--- |
-| `--dir <Ruta>` | `-d` | Carpeta fundamental que desencadena el escáner del `main.py`. | *(Última Ruta)* |
-| `--workers <N>` | `-w` | Define el límite de tareas ejecutadas en paralelo a la vez. | `5` |
-| `--autostash` | — | Congela ramas momentáneamente antes de un pull con bloqueos extra. | `False` |
-| `--log <Archivo>` | `-l` | Fuerza volcado físico de salida terminal (Git Outputs). | *(Omita Vacio)* |
-| `--file <Archivo>` | `-f` | Inyecta el archivo JSON fuente a comandos de Backup masivo. | `snapshot.json` |
+| `--dir <Path>` | `-d` | Directorio raíz para el escaneo recursivo de repositorios. | *(Última ruta utilizada)* |
+| `--workers <N>` | `-w` | Número de hilos simultáneos (Límite superior: 50). | `5` |
+| `--autostash` | — | Automatiza el `stash` preventivo durante operaciones de actualización. | `False` |
+| `--branch <Name>` | `-b` | Especifica la rama objetivo (Requerido para la operación `checkout`). | — |
+| `--file <Path>` | `-f` | Archivo JSON de referencia para `export` y `restore`. | `snapshot.json` |
+| `--dry-run` | — | Simula la ejecución sin aplicar cambios reales en el sistema de archivos. | `False` |
+| `--gui` | — | Fuerza el arranque de la interfaz gráfica de usuario. | — |
+| `--log <Path>` | `-l` | Redirige el flujo de salida de la terminal a un archivo log persistente. | — |
 
-### Ejemplos
+---
+
+## Interfaz Gráfica de Usuario (GUI)
+
+En instalaciones **Desktop**, la interfaz gráfica puede lanzarse directamente desde el menú de aplicaciones del sistema. Para ejecuciones manuales desde terminal, utilice la bandera de control:
 
 ```bash
-# Sincroniza red a 12 hilos congelando temporalmente modificaciones para prevenir rechazo estricto "non-fast-forward"
-python -m src.main pull -d "/home/usuario/proyectos" -w 12 --autostash
-
-# Visualiza topográficamente el workspace y todas sus ramas por defecto
-python -m src.main current-branch
-
-# Creación veloz y automática de toda la red local en otra computadora (Onboarding Instantáneo)
-python -m src.main export -f infraestructura_backend.json
-python -m src.main restore -f infraestructura_backend.json -w 20
+gitbulk --gui
 ```
 
----
-
-## Como Funciona la Persistencia
-
-la primera vez que ejecutas el programa, se crea un archivo de configuracion oculto en tu carpeta de usuario (ej. `C:\Users\Usuario\.git_manager_pro.json` o `~/.git_manager_pro.json`). este archivo almacena tus preferencias, como la ultima ruta sobre lo que operaste, mejorando la comodidad en usos futuros.
-
-con esto, tu proyecto no solo tiene un codigo de primera categoria, sino tambien una documentacion que lo respalda. cualquier desarrollador que vea tu repositorio de GitHub (o donde decidas guardarlo) entendera al instante como esta construido y como usarlo.
+La GUI proporciona un entorno centralizado para la supervisión de proyectos, facilitando la ejecución de comandos complejos mediante una interacción visual simplificada.
 
 ---
 
-**GitBulk** es una herramienta de código abierto. Siéntete libre de contribuir o reportar errores en el repositorio oficial.
+## Arquitectura y Persistencia
 
-*Desarrollado con ❤️ por rezzt-dev.*
+En su primera ejecución, GitBulk inicializa un esquema de configuración persistente en el directorio personal del usuario (ej. `~/.git_manager_pro.json`). Este archivo centraliza la gestión de estados, rutas de trabajo y tokens de acceso, garantizando una experiencia de usuario coherente entre sesiones.
 
+---
+
+**GitBulk** es un proyecto de código abierto. Puede contribuir al desarrollo o reportar incidencias a través del repositorio oficial.
+
+*Desarrollado por rezzt-dev.*

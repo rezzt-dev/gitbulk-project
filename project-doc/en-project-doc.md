@@ -1,33 +1,51 @@
-# GitBulk Documentation
+# GitBulk Technical Documentation
 
 ## Table of Contents
 1. [Introduction](#introduction)
-2. [Features](#features)
-3. [Installation](#installation)
-4. [Authentication](#authentication)
-5. [Core Commands](#core-commands)
-6. [Global Flags](#global-flags)
-7. [Advanced Usage](#advanced-usage)
+2. [Key Features](#key-features)
+3. [Installation and Deployment](#installation-and-deployment)
+4. [Authentication Management](#authentication-management)
+5. [Operation Catalog](#operation-catalog)
+6. [Global Flags and Parameters](#global-flags-and-parameters)
+7. [Advanced Usage Scenarios](#advanced-usage-scenarios)
+
+---
 
 ## Introduction
-GitBulk is a robust, concurrent Command Line Interface (CLI) utility built in Python. It is designed to orchestrate and execute Git operations across multiple isolated repositories simultaneously. Utilizing `GitPython` as its underlying engine and `ThreadPoolExecutor` for parallel processing, GitBulk mitigates the latency and repetitive strain of managing large-scale microservice architectures or multi-repository environments.
 
-## Features
-- **Concurrent Execution**: Processes multiple directories simultaneously without thread-blocking.
-- **Cross-Platform Compatibility**: Fully functional on Linux, Windows, and macOS environments.
-- **Interactive Safeguards**: Prevents accidental data loss through interactive prompts on destructive actions.
-- **Detailed CLI Reporting**: Utilizes `rich` to render compact, color-coded matrices and progress bars.
-- **Authentication Handling**: Capable of reading global Git credentials seamlessly to interact with remote origins without interrupting process flows.
-- **CI / Actions Monitoring**: Connects natively to the GitHub API to check live pipeline status.
+GitBulk is a high-performance, integrated solution (CLI and GUI) built in Python for large-scale Git repository orchestration. Designed for microservice architectures and multi-repository environments, the tool mitigates operational latency through concurrent processing, enabling complete development lifecycles to be executed across hundreds of projects simultaneously and securely.
 
-## Installation
+---
 
-### Prerequisites
-- Python 3.10 or higher.
-- Git installed and accessible in the system PATH.
+## Key Features
 
-### Setup from Source
-Clone the repository and install the required dependencies:
+- **Concurrent Execution**: Engine based on `ThreadPoolExecutor` that eliminates bottlenecks in network and disk operations.
+- **Native Desktop Interface**: High-fidelity application for Windows and Linux environments, featuring dark mode support and real-time monitoring.
+- **Operational Resilience**: Built-in protection mechanisms with interactive prompts to prevent accidental data loss during destructive commands.
+- **High-Density Technical Reporting**: Visualization using the `rich` library, providing compact matrices, color-coded statuses, and progress telemetry.
+- **CI / GitHub Actions Integration**: Native status querying for pipelines directly from the terminal or the desktop interface.
+
+---
+
+## Installation and Deployment
+
+### Recommended Installation (Web Installer)
+
+GitBulk provides optimized one-step installers that automatically configure binaries, shortcuts, and environment variables.
+
+**Windows (PowerShell):**
+```powershell
+iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1" | iex
+```
+
+**Linux (Bash):**
+```bash
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install_linux.sh" | bash
+```
+
+### Setup from Source (Development)
+
+For development or customization environments, clone the repository and install the dependency tree:
 
 ```bash
 git clone https://github.com/rezzt-dev/gitbulk-project.git
@@ -35,79 +53,72 @@ cd gitbulk-project
 pip install -r requirements.txt
 ```
 
-### Building the Binary
-To compile GitBulk into a standalone executable that does not require a Python runtime environment, use PyInstaller:
+---
 
+## Authentication Management
+
+Certain operations (such as `fetch` on private repositories or `ci-status` queries) require valid credentials. GitBulk centralizes this management by requesting a Personal Access Token (PAT) once and storing it securely within the operating system's credentials.
+
+To configure the access environment:
 ```bash
-pip install pyinstaller
-pyinstaller --name gitbulk --onefile src/main.py
+gitbulk auth
 ```
-The resulting binary will be located in the `dist/` directory. You can move this binary to your system's binaries folder (e.g., `/usr/local/bin/` on Linux) for global access.
+This command configures the global Git helper, allowing subsequent operations to execute silently without credential prompt interruptions.
 
-## Authentication
-Certain network-reliant operations (like fetching remote branches or querying CI statuses) require valid GitHub credentials. GitBulk simplifies this by requesting a Personal Access Token (PAT) once and storing it securely.
+---
 
-To configure your credentials:
-```bash
-python main.py auth
-```
-This command stores the credential string sequentially in `~/.git-credentials`, configuring your global Git helper to use it. Subsequent operations will extract this token silently.
-
-## Core Commands
+## Operation Catalog
 
 ### `status`
-Scans the working tree of all repositories to report their divergence relative to the tracked upstream branches.
-**Output States**: `[CLEAN]`, `[MODIFIED]`, `[AHEAD]`, `[BEHIND]`.
+Analyzes the working tree state and reports divergence relative to tracked remote branches.
+**States**: `[CLEAN]`, `[MODIFIED]`, `[AHEAD]`, `[BEHIND]`.
 
 ### `fetch`
-Downloads the remote history without integrating it into the local working tree.
-**Output States**: `[OK]`, `[UPDATES]` (indicates commits pending to be pulled).
+Downloads remote history metadata without integrating changes into local branches.
+**States**: `[OK]`, `[UPDATES]`.
 
 ### `pull`
-Updates the active branch with the latest remote commits exclusively via fast-forward.
-**Output States**: `[OK]`, `[CONFLICT]`, `[DIVERGENT]`.
-**Related Flag**: `--autostash`
+Updates the active branch using a `fast-forward only` integration strategy.
+**Suggested Flags**: `--autostash`.
 
 ### `checkout`
-Shifts the `HEAD` pointer of all repositories to a specified branch. If the branch exists locally, it checks it out. If it exists tracking on the remote but not locally, it creates the link and downloads it. Repositories lacking the branch are safely ignored.
-**Required Flag**: `-b <branch_name>`
+Performs a bulk transition of `HEAD` towards the specified branch.
+**Required Parameter**: `-b <branch_name>`.
 
 ### `current-branch`
-Renders an ultra-compact topographic map showing the active branch, existing local branches, and remote-only branches for each repository.
+Generates an ultra-compact topographic map showing the active branch and local/remote references.
 
 ### `clean`
-A strict, destructive operation that executes `git fetch --prune` and `git clean -xfd`. It permanently removes deleted remote references and untracked files/directories (like `node_modules` or `build`).
-**Warning**: Requires interactive confirmation.
+**Destructive Operation**: Executes `git fetch --prune` and `git clean -xfd`. Removes dead remote references and untracked files. Requires interactive confirmation.
 
 ### `ci-status`
-Connects asynchronously to the GitHub API to query the integration pipelines (GitHub Actions) of the current `HEAD` commit.
-**Output States**: `[PASS]`, `[FAIL]`, `[PEND]`, `[NONE]`
+Asynchronous query to the GitHub API to report the status of continuous integration pipelines.
+**States**: `[PASS]`, `[FAIL]`, `[PEND]`, `[NONE]`.
 
-### `export`
-Serializes the state, URLs, and active branch metadata of all discovered repositories into a JSON snapshot.
-**Related Flag**: `-f <file_path>`
+### `export` / `restore`
+Enables persistence and reconstruction of large-scale workspaces using JSON snapshot files. Useful for instant onboarding processes.
 
-### `restore`
-Reads a previously generated JSON snapshot and clones any missing repositories into the active working directory, positioning them on the identical branch captured during the export.
-**Related Flag**: `-f <file_path>`
+---
 
-## Global Flags
+## Global Flags and Parameters
 
-- `-d, --dir <path>`: Specifies the root directory to scan recursively. Defaults to the current or last used directory.
-- `-w, --workers <int>`: Defines the number of concurrent thread workers. Default: 5.
-- `-l, --log <path>`: Instructs the system to dump a raw text log of the operation outputs into the specified file.
-- `-b, --branch <name>`: Target branch parameter. Mandatory for the `checkout` operation.
-- `-f, --file <path>`: The target JSON file path for the `export` and `restore` operations. Default: `snapshot.json`.
-- `--autostash`: Safely stashes uncommitted local modifications prior to a `pull` operation, reapplying them automatically after the remote history is integrated.
+- `-d, --dir <path>`: Root directory for recursive scanning. Preserves the persistence of the last used path.
+- `-w, --workers <n>`: Number of concurrent threads (Limit: 50). Default: `5`.
+- `-l, --log <path>`: Redirection of technical output to a persistent log file.
+- `-b, --branch <name>`: Target branch for transition operations (`checkout`).
+- `--autostash`: Automates the safeguarding of local changes prior to an update.
+- `--dry-run`: Preview changes without real application (Supported in `clean` and `restore`).
+- `--gui`: Forces the launch of the graphical user interface.
 
-## Advanced Usage
+---
 
-### Safe Pulling with AutoStash
-When developers leave uncommitted work, a standard pull will fail. Use autostash to bypass blocks while preserving code:
+## Advanced Usage Scenarios
+
+### Synchronization with AutoStash
+To avoid blocks caused by uncommitted local changes during a bulk pull, the `--autostash` instruction allows for automatic stashing, updating, and re-applying of the work patch.
 ```bash
-python main.py pull --autostash
+gitbulk pull --autostash
 ```
-State returns `[SYNC+STASH]` if modifications were restored successfully, or `[STASH CONFLICT]` if manual merge intervention is necessary.
 
-### Piped Execution
-GitBulk is designed to be compatible with automated CI runners. Interactive commands like `clean` will safely intercept broken pipes or empty standard inputs (such as `< /dev/null`), aborting operation execution cleanly without crashing the pipeline.
+### Execution in CI Environments (Piped Execution)
+GitBulk has been designed following POSIX process standards. Interactive operations like `clean` automatically detect the absence of a terminal (`tty`) or null `stdin` injections, aborting execution safely to prevent catastrophic failures in automated pipelines.
