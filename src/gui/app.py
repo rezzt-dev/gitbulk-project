@@ -49,13 +49,6 @@ def run_gui():
     """
     _set_taskbar_icon()
 
-<<<<<<< Updated upstream
-def run_gui():
-    """
-    Initializes and starts the PySide6 Application.
-    """
-    _set_taskbar_icon()
-
     # ── DPI Handling (MUST be before QApplication)
     if hasattr(Qt, 'AA_EnableHighDpiScaling'):
         QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)

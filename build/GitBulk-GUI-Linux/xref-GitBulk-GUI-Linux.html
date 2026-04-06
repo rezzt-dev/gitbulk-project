@@ -445,6 +445,10 @@ imported by:
  &#8226;   <a href="#PySide6.QtSvgWidgets">PySide6.QtSvgWidgets</a>
  &#8226;   <a href="#PySide6.QtWidgets">PySide6.QtWidgets</a>
  &#8226;   <a href="#PySide6.QtXml">PySide6.QtXml</a>
+ &#8226;   <a href="#gui.app">gui.app</a>
+ &#8226;   <a href="#gui.icon_manager">gui.icon_manager</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#gui.workers">gui.workers</a>
 
   </div>
 
@@ -498,6 +502,9 @@ imported by:
  &#8226;   <a href="#PySide6.QtSvg">PySide6.QtSvg</a>
  &#8226;   <a href="#PySide6.QtSvgWidgets">PySide6.QtSvgWidgets</a>
  &#8226;   <a href="#PySide6.QtWidgets">PySide6.QtWidgets</a>
+ &#8226;   <a href="#gui.app">gui.app</a>
+ &#8226;   <a href="#gui.icon_manager">gui.icon_manager</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
  &#8226;   <a href="#main.py">main.py</a>
 
   </div>
@@ -547,6 +554,7 @@ imports:
 imported by:
     <a href="#PySide6.QtSvg">PySide6.QtSvg</a>
  &#8226;   <a href="#PySide6.QtSvgWidgets">PySide6.QtSvgWidgets</a>
+ &#8226;   <a href="#gui.icon_manager">gui.icon_manager</a>
  &#8226;   <a href="#main.py">main.py</a>
 
   </div>
@@ -597,6 +605,8 @@ imports:
 imported by:
     <a href="#PySide6.QtSvgWidgets">PySide6.QtSvgWidgets</a>
  &#8226;   <a href="#PySide6.QtWidgets">PySide6.QtWidgets</a>
+ &#8226;   <a href="#gui.app">gui.app</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
  &#8226;   <a href="#main.py">main.py</a>
 
   </div>
@@ -3668,6 +3678,7 @@ imported by:
  &#8226;   <a href="#concurrent.futures.interpreter">concurrent.futures.interpreter</a>
  &#8226;   <a href="#concurrent.futures.process">concurrent.futures.process</a>
  &#8226;   <a href="#concurrent.futures.thread">concurrent.futures.thread</a>
+ &#8226;   <a href="#gui.workers">gui.workers</a>
  &#8226;   <a href="#main.py">main.py</a>
 
   </div>
@@ -4045,6 +4056,7 @@ imported by:
  &#8226;   <a href="#ctypes.macholib">ctypes.macholib</a>
  &#8226;   <a href="#ctypes.util">ctypes.util</a>
  &#8226;   <a href="#ctypes.wintypes">ctypes.wintypes</a>
+ &#8226;   <a href="#gui.app">gui.app</a>
  &#8226;   <a href="#multiprocessing.sharedctypes">multiprocessing.sharedctypes</a>
  &#8226;   <a href="#platform">platform</a>
  &#8226;   <a href="#rich._win32_console">rich._win32_console</a>
@@ -9516,7 +9528,9 @@ imported by:
 imported by:
     <a href="#gui.app">gui.app</a>
  &#8226;   <a href="#gui.icon_manager">gui.icon_manager</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
  &#8226;   <a href="#gui.translations">gui.translations</a>
+ &#8226;   <a href="#gui.workers">gui.workers</a>
 
   </div>
 
@@ -9525,9 +9539,19 @@ imported by:
 <div class="node">
   <a name="gui.app"></a>
   <a target="code" href="///home/rezzt/repositorios/desktop-projects/gitbulk-project/src/gui/app.py" type="text/plain"><tt>gui.app</tt></a>
-<span class="moduletype">InvalidSourceModule</span>  <div class="import">
+<span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#gui">gui</a>
+    <a href="#PySide6.QtCore">PySide6.QtCore</a>
+ &#8226;   <a href="#PySide6.QtGui">PySide6.QtGui</a>
+ &#8226;   <a href="#PySide6.QtWidgets">PySide6.QtWidgets</a>
+ &#8226;   <a href="#ctypes">ctypes</a>
+ &#8226;   <a href="#gui">gui</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#gui.translations">gui.translations</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#persistence">persistence</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#translations">translations</a>
 
   </div>
   <div class="import">
@@ -9541,14 +9565,50 @@ imported by:
 <div class="node">
   <a name="gui.icon_manager"></a>
   <a target="code" href="///home/rezzt/repositorios/desktop-projects/gitbulk-project/src/gui/icon_manager.py" type="text/plain"><tt>gui.icon_manager</tt></a>
-<span class="moduletype">InvalidSourceModule</span>  <div class="import">
+<span class="moduletype">SourceModule</span>  <div class="import">
 imports:
-    <a href="#gui">gui</a>
+    <a href="#PySide6.QtCore">PySide6.QtCore</a>
+ &#8226;   <a href="#PySide6.QtGui">PySide6.QtGui</a>
+ &#8226;   <a href="#PySide6.QtSvg">PySide6.QtSvg</a>
+ &#8226;   <a href="#gui">gui</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#sys">sys</a>
 
   </div>
   <div class="import">
 imported by:
-    <a href="#main.py">main.py</a>
+    <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="gui.main_window"></a>
+  <a target="code" href="///home/rezzt/repositorios/desktop-projects/gitbulk-project/src/gui/main_window.py" type="text/plain"><tt>gui.main_window</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#PySide6.QtCore">PySide6.QtCore</a>
+ &#8226;   <a href="#PySide6.QtGui">PySide6.QtGui</a>
+ &#8226;   <a href="#PySide6.QtWidgets">PySide6.QtWidgets</a>
+ &#8226;   <a href="#gui">gui</a>
+ &#8226;   <a href="#gui.icon_manager">gui.icon_manager</a>
+ &#8226;   <a href="#gui.translations">gui.translations</a>
+ &#8226;   <a href="#gui.workers">gui.workers</a>
+ &#8226;   <a href="#json">json</a>
+ &#8226;   <a href="#model.git_ops">model.git_ops</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#persistence">persistence</a>
+ &#8226;   <a href="#persistence.config_repo">persistence.config_repo</a>
+ &#8226;   <a href="#sys">sys</a>
+ &#8226;   <a href="#time">time</a>
+ &#8226;   <a href="#translations">translations</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#gui.app">gui.app</a>
 
   </div>
 
@@ -9566,7 +9626,32 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#main.py">main.py</a>
+    <a href="#gui.app">gui.app</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#main.py">main.py</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="gui.workers"></a>
+  <a target="code" href="///home/rezzt/repositorios/desktop-projects/gitbulk-project/src/gui/workers.py" type="text/plain"><tt>gui.workers</tt></a>
+<span class="moduletype">SourceModule</span>  <div class="import">
+imports:
+    <a href="#PySide6.QtCore">PySide6.QtCore</a>
+ &#8226;   <a href="#concurrent.futures">concurrent.futures</a>
+ &#8226;   <a href="#gui">gui</a>
+ &#8226;   <a href="#model.ci_ops">model.ci_ops</a>
+ &#8226;   <a href="#model.git_ops">model.git_ops</a>
+ &#8226;   <a href="#model.scanner">model.scanner</a>
+ &#8226;   <a href="#os">os</a>
+ &#8226;   <a href="#sys">sys</a>
+
+  </div>
+  <div class="import">
+imported by:
+    <a href="#gui.main_window">gui.main_window</a>
 
   </div>
 
@@ -10632,7 +10717,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#gui.translations">gui.translations</a>
+    <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#gui.translations">gui.translations</a>
  &#8226;   <a href="#importlib.metadata">importlib.metadata</a>
  &#8226;   <a href="#json.decoder">json.decoder</a>
  &#8226;   <a href="#json.encoder">json.encoder</a>
@@ -12553,7 +12639,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#model">model</a>
+    <a href="#gui.workers">gui.workers</a>
+ &#8226;   <a href="#model">model</a>
 
   </div>
 
@@ -12593,7 +12680,9 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#model">model</a>
+    <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#gui.workers">gui.workers</a>
+ &#8226;   <a href="#model">model</a>
  &#8226;   <a href="#model.ci_ops">model.ci_ops</a>
 
   </div>
@@ -12612,7 +12701,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#model">model</a>
+    <a href="#gui.workers">gui.workers</a>
+ &#8226;   <a href="#model">model</a>
 
   </div>
 
@@ -13656,7 +13746,11 @@ imported by:
  &#8226;   <a href="#gitdb.stream">gitdb.stream</a>
  &#8226;   <a href="#gitdb.util">gitdb.util</a>
  &#8226;   <a href="#glob">glob</a>
+ &#8226;   <a href="#gui.app">gui.app</a>
+ &#8226;   <a href="#gui.icon_manager">gui.icon_manager</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
  &#8226;   <a href="#gui.translations">gui.translations</a>
+ &#8226;   <a href="#gui.workers">gui.workers</a>
  &#8226;   <a href="#gzip">gzip</a>
  &#8226;   <a href="#http.cookiejar">http.cookiejar</a>
  &#8226;   <a href="#http.server">http.server</a>
@@ -13868,7 +13962,9 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#main.py">main.py</a>
+    <a href="#gui.app">gui.app</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#main.py">main.py</a>
  &#8226;   <a href="#persistence.config_repo">persistence.config_repo</a>
 
   </div>
@@ -13889,7 +13985,8 @@ imports:
   </div>
   <div class="import">
 imported by:
-    <a href="#persistence">persistence</a>
+    <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#persistence">persistence</a>
 
   </div>
 
@@ -25892,6 +25989,10 @@ imported by:
  &#8226;   <a href="#gitdb.stream">gitdb.stream</a>
  &#8226;   <a href="#gitdb.util">gitdb.util</a>
  &#8226;   <a href="#glob">glob</a>
+ &#8226;   <a href="#gui.app">gui.app</a>
+ &#8226;   <a href="#gui.icon_manager">gui.icon_manager</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
+ &#8226;   <a href="#gui.workers">gui.workers</a>
  &#8226;   <a href="#gzip">gzip</a>
  &#8226;   <a href="#http.client">http.client</a>
  &#8226;   <a href="#http.server">http.server</a>
@@ -26236,6 +26337,7 @@ imported by:
  &#8226;   <a href="#git.util">git.util</a>
  &#8226;   <a href="#gitdb.db.loose">gitdb.db.loose</a>
  &#8226;   <a href="#gitdb.util">gitdb.util</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
  &#8226;   <a href="#gzip">gzip</a>
  &#8226;   <a href="#http.cookiejar">http.cookiejar</a>
  &#8226;   <a href="#http.server">http.server</a>
@@ -26388,6 +26490,18 @@ imports:
   <div class="import">
 imported by:
     <a href="#_py_warnings">_py_warnings</a>
+
+  </div>
+
+</div>
+
+<div class="node">
+  <a name="translations"></a>
+  <a target="code" href="" type="text/plain"><tt>translations</tt></a>
+<span class="moduletype">MissingModule</span>  <div class="import">
+imported by:
+    <a href="#gui.app">gui.app</a>
+ &#8226;   <a href="#gui.main_window">gui.main_window</a>
 
   </div>
 

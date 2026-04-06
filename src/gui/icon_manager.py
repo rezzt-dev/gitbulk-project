@@ -10,11 +10,6 @@ def resource_path(relative_path: str) -> str:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
     except Exception:
-<<<<<<< Updated upstream
-        # Fallback for development (not bundled)
-        # Assuming we are in src/gui/icon_manager.py, we go up to project root
-=======
->>>>>>> Stashed changes
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
     return os.path.join(base_path, relative_path)
