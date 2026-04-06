@@ -34,16 +34,29 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
 
         if operation in ["fetch", "sync"]:
             output = repo.git.fetch()
+            
+            # Use shared status logic for detailed reporting
+            is_dirty = repo.is_dirty(untracked_files=True)
+            if is_dirty:
+                modified_count = len(repo.untracked_files) + len([diff for diff in repo.index.diff(None)]) + len([diff for diff in repo.index.diff('HEAD')])
+                return "MODIFIED", f"{modified_count} files", repo_path, output
+            
             try:
                 active_branch = repo.active_branch
                 tracking_branch = active_branch.tracking_branch()
                 if tracking_branch:
                     commits_behind = list(repo.iter_commits(f'{active_branch.name}..{tracking_branch.name}'))
-                    if commits_behind:
-                        return "FETCH_UPDATE", f"{len(commits_behind)} commits to pull", repo_path, output
+                    commits_ahead = list(repo.iter_commits(f'{tracking_branch.name}..{active_branch.name}'))
+                    
+                    if commits_ahead and commits_behind:
+                        return "DIVERGENT", f"↑{len(commits_ahead)} ↓{len(commits_behind)}", repo_path, output
+                    elif commits_ahead:
+                        return "AHEAD", f"{len(commits_ahead)} commits", repo_path, output
+                    elif commits_behind:
+                        return "BEHIND", f"{len(commits_behind)} commits", repo_path, output
+                return "OK", "Up to date", repo_path, output
             except Exception:
-                pass
-            return "OK", "Up to date", repo_path, output
+                return "OK", "Up to date", repo_path, output
 
         if operation == "clean":
             if dry_run:

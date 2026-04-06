@@ -1,6 +1,7 @@
 import os
 import sys
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QIcon, QFont
 from .main_window import MainWindow
 
@@ -42,8 +43,18 @@ def run_gui():
 
     app = QApplication(sys.argv)
     
-    # ── Global Typography (Terminal Style)
-    app.setFont(QFont("JetBrains Mono", 10))
+    # ── High Fidelity Typography & DPI Handling
+    app.setAttribute(Qt.AA_UseHighDpiPixmaps)
+    
+    if hasattr(app, 'setHighDpiScaleFactorRoundingPolicy'):
+        app.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
+    
+    # ── Master Font Setup (Clean, Non-Pixelated Strategy)
+    font = QFont("JetBrains Mono")
+    font.setPointSizeF(10.5) # Points scale better than pixels for high-quality rendering
+    font.setStyleStrategy(QFont.PreferAntialias | QFont.PreferQuality)
+    font.setHintingPreference(QFont.PreferNoHinting) # Allow OS ClearType to handle smoothing
+    app.setFont(font)
 
     # ── App icon: prefer .ico (native Windows multi-size), fallback to .svg
     base    = _resolve_base()

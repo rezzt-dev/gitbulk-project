@@ -125,6 +125,7 @@ class TrafficLightGroup(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.TextAntialiasing, True)
 
         for i, (base, pressed_color, symbol) in enumerate(self._CIRCLES):
             # Use QRectF for sub-pixel ellipse accuracy
@@ -283,7 +284,7 @@ class MoveToDialog(QDialog):
         layout.setSpacing(15)
 
         lbl = QLabel(TR("dlg_move_label"))
-        lbl.setStyleSheet("color: #888888; font-family: 'JetBrains Mono'; font-weight: bold;")
+        lbl.setStyleSheet("color: #888888; font-family: 'JetBrains Mono'; font-weight: 500; font-size: 11px;")
         layout.addWidget(lbl)
 
         self.combo = QComboBox()
@@ -310,7 +311,7 @@ class MoveToDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_cancel = QPushButton(TR("dlg_move_cancel"))
         btn_move = QPushButton(TR("dlg_move_btn"))
-        btn_move.setStyleSheet("background: #4CAF50; color: white; font-family: 'JetBrains Mono'; font-weight: bold; padding: 8px 20px; border-radius: 4px;")
+        btn_move.setStyleSheet("background: #4CAF50; color: white; font-family: 'JetBrains Mono'; font-weight: 500; padding: 8px 20px; border-radius: 0px;")
         
         btn_cancel.clicked.connect(self.reject)
         btn_move.clicked.connect(self.accept)
@@ -344,7 +345,8 @@ class WorkspaceTreeView(QTreeView):
                 border: none;
                 color: #BBBBBB;
                 font-family: 'JetBrains Mono';
-                font-size: 13px;
+                font-size: 12px;
+                letter-spacing: 0.3px;
                 outline: none;
             }
             QTreeView::item {
@@ -611,7 +613,9 @@ class MainWindow(QMainWindow):
         self.btn_expand_all.setText(TR("btn_expand"))
         
         # Force a re-render of the tree for things like 'Awaiting operation'
+        open_state = self._get_expansion_state()
         self._rebuild_tree()
+        self._apply_expansion_state(open_state)
 
     def _sidebar_btn(self, label, icon_name, icon_color):
         btn = QPushButton(label)
@@ -654,7 +658,7 @@ class MainWindow(QMainWindow):
 
         self.lbl_workspace_title = QLabel(TR("status_idle"))
         self.lbl_workspace_title.setObjectName("workspaceTitle")
-        self.lbl_workspace_title.setStyleSheet("font-family: 'JetBrains Mono'; font-size: 14px; font-weight: 600; color: #EEEEEE;")
+        self.lbl_workspace_title.setStyleSheet("font-family: 'JetBrains Mono'; font-size: 14px; font-weight: 500; color: #EEEEEE; letter-spacing: 0.5px;")
         header_layout.addWidget(self.lbl_workspace_title)
 
         self.lbl_repo_count = QLabel("")
@@ -707,14 +711,16 @@ class MainWindow(QMainWindow):
         self.tree.setExpandsOnDoubleClick(False)
         self.tree.setUniformRowHeights(True)
 
-        # Drag & Drop
-        self.tree.setDragEnabled(True)
-        self.tree.setAcceptDrops(True)
-        self.tree.setDropIndicatorShown(True)
-        # Using DragDrop instead of InternalMove to completely bypass Qt's
-        # buggy internal move handling and use our manual 100% atomic dropEvent.
-        self.tree.setDragDropMode(QAbstractItemView.DragDrop)
-        self.tree.setDefaultDropAction(Qt.MoveAction)
+        # Drag & Drop — DISABLED intentionally.
+        # All reordering is done exclusively via the context-menu Move To action
+        # + _rebuild_tree(), which is the only safe atomic renderer.
+        # Qt's native D&D on QStandardItemModel is destructive: it copies only
+        # column-0 items and loses all sibling columns (branch/status/output)
+        # as well as Qt.UserRole data (REPO/GROUP type and path).
+        self.tree.setDragEnabled(False)
+        self.tree.setAcceptDrops(False)
+        self.tree.setDropIndicatorShown(False)
+        self.tree.setDragDropMode(QAbstractItemView.NoDragDrop)
 
         # Column sizing
         header = self.tree.header()
@@ -861,32 +867,86 @@ class MainWindow(QMainWindow):
             self.workspace_data = self._load_virtual_layout() or []
 
         # ── Global Renderer
+        open_state = self._get_expansion_state()
         self._rebuild_tree()
-        self.tree.expandAll()
+        self._apply_expansion_state(open_state)
         self._set_status(TR("status_loaded"), TR("status_repos_found", count=len(repos)), "", "#4CAF50")
+
+    # ── Ordering Helpers (Invariant: groups before loose repos) ──────────────
+
+    def _sort_nodes(self, nodes):
+        """
+        Sorts a node list IN-PLACE so that group nodes always come before
+        repo nodes. Within each category the original relative order is kept
+        (stable sort). Returns the same list for convenience.
+        """
+        nodes.sort(key=lambda n: (0 if n.get("is_group") else 1))
+        return nodes
+
+    def _sort_workspace_data(self, data):
+        """
+        Recursively sorts every level of the workspace data so that the
+        invariant (groups before repos) holds throughout the full hierarchy.
+        Operates in-place.
+        """
+        self._sort_nodes(data)
+        for node in data:
+            if node.get("is_group") and "children" in node:
+                self._sort_workspace_data(node["children"])
+
+    def _insert_sorted(self, container, node):
+        """
+        Inserts `node` into `container` while keeping the groups-first
+        invariant: groups go after the last existing group (or at index 0
+        when there are none), repos go at the very end.
+        """
+        if node.get("is_group"):
+            # Find the insertion point: right after the last group
+            insert_at = 0
+            for i, n in enumerate(container):
+                if n.get("is_group"):
+                    insert_at = i + 1
+            container.insert(insert_at, node)
+        else:
+            # Repos always go at the end
+            container.append(node)
+
+    # ── Master Renderer ───────────────────────────────────────────────────────
 
     def _rebuild_tree(self):
         """
-        MASTER RENDERER: Syncs GUI tree with state.
+        MASTER RENDERER: Sorts workspace_data to enforce the groups-first
+        invariant, then rebuilds the QStandardItemModel from scratch.
+        All visual state (colours, fonts, icons, column data) is re-created
+        here so that no stale Qt items can leak from previous renders.
         """
+        # 1. Enforce groups-first at every level of the data model before
+        #    translating it to QStandardItems.
+        self._sort_workspace_data(self.workspace_data)
+
         self.repo_model.removeRows(0, self.repo_model.rowCount())
         root = self.repo_model.invisibleRootItem()
 
         def build_recursive(data_list, parent_item):
+            # data_list is already sorted (groups first) by _sort_workspace_data
             for node in data_list:
                 if node.get("is_group"):
                     group = GroupFolderItem(node["name"])
                     group.setData("GROUP", Qt.UserRole)
                     group.setForeground(QColor("#EEEEEE"))
                     group.setIcon(get_icon("folder", "#888888"))
-                    
-                    cols = [group]
-                    for _ in range(3):
-                        c = QStandardItem("")
-                        c.setFlags(Qt.ItemIsEnabled)
-                        cols.append(c)
-                    
-                    parent_item.appendRow(cols)
+
+                    # All 4 columns must be created together so that sibling
+                    # accessors (parent.child(row, col)) always work correctly.
+                    col_branch = QStandardItem("")
+                    col_branch.setFlags(Qt.ItemIsEnabled)
+                    col_status = QStandardItem("")
+                    col_status.setFlags(Qt.ItemIsEnabled)
+                    col_output = QStandardItem("")
+                    col_output.setFlags(Qt.ItemIsEnabled)
+
+                    parent_item.appendRow([group, col_branch, col_status, col_output])
+
                     if "children" in node:
                         build_recursive(node["children"], group)
                 else:
@@ -895,15 +955,24 @@ class MainWindow(QMainWindow):
                         self._create_repo_row(parent_item, path)
 
         build_recursive(self.workspace_data, root)
-        
-        # Auto-add missing disk repos to data and root
+
+        # 2. Auto-add repos that exist on disk but are not yet in the data
+        #    model.  They are loose repos → always go at the end (after all
+        #    groups that are already at root level).
         mapped = self._get_mapped_paths(self.workspace_data)
         for r_path in self.found_repos:
             if r_path not in mapped:
-                self.workspace_data.append({"name": os.path.basename(r_path), "is_group": False, "path": r_path})
+                new_node = {
+                    "name": os.path.basename(r_path),
+                    "is_group": False,
+                    "path": r_path,
+                }
+                # Keep data model consistent: append to end (repos go last)
+                self.workspace_data.append(new_node)
                 self._create_repo_row(root, r_path)
 
     def _get_mapped_paths(self, data):
+        """Recursively collects all repository paths already in the data model."""
         paths = set()
         for n in data:
             if n.get("is_group"):
@@ -1078,16 +1147,23 @@ class MainWindow(QMainWindow):
 
                 try:
                     open_state = self._get_expansion_state()
-                    
-                    # 1. Pop from source
-                    src_container, src_idx = self._get_data_container_and_index(node_path)
-                    node = src_container.pop(src_idx)
-                    
-                    # 2. Add to target root or container
+
+                    # Resolve the target container reference BEFORE the pop.
+                    # We use the Python object identity so even if the pop
+                    # shifts positional indices inside the list, the reference
+                    # to the list object itself stays valid.
                     tgt_container = self._get_data_container(tgt_container_path)
-                    tgt_container.append(node)
-                    
-                    # 3. Sync
+
+                    # Pop from source.  If the source and target are the SAME
+                    # list (same container, just reordering inside it) the pop
+                    # does not invalidate the reference — we still hold it.
+                    src_container, src_idx = self._get_data_container_and_index(node_path)
+                    node_data = src_container.pop(src_idx)
+
+                    # Insert into target maintaining the groups-first invariant.
+                    self._insert_sorted(tgt_container, node_data)
+
+                    # Full atomic rebuild then restore which groups were open.
                     self._rebuild_tree()
                     self._apply_expansion_state(open_state)
                     self._save_virtual_layout()
@@ -1100,16 +1176,20 @@ class MainWindow(QMainWindow):
             if ok and text:
                 container, idx = self._get_data_container_and_index(node_path)
                 if idx < len(container):
+                    open_state = self._get_expansion_state()
                     container[idx]["name"] = text
                     self._rebuild_tree()
+                    self._apply_expansion_state(open_state)
                     self._save_virtual_layout()
         elif 'action_delete' in locals() and action == action_delete:
             reply = QMessageBox.question(self, TR("dlg_delete_title"), TR("dlg_delete_msg"), QMessageBox.Yes | QMessageBox.No)
             if reply == QMessageBox.Yes:
                 container, idx = self._get_data_container_and_index(node_path)
                 if idx < len(container):
+                    open_state = self._get_expansion_state()
                     container.pop(idx)
                     self._rebuild_tree()
+                    self._apply_expansion_state(open_state)
                     self._save_virtual_layout()
 
     def _get_all_group_labels(self, data, prefix, path_acc, results):
@@ -1130,24 +1210,30 @@ class MainWindow(QMainWindow):
 
         new_node = {"name": text, "is_group": True, "children": []}
         sel = self.tree.selectedIndexes()
-        
+
         if sel:
             idx = sel[0].sibling(sel[0].row(), 0)
             target_path = self._get_data_path(idx)
             item = self.repo_model.itemFromIndex(idx)
-            
+
             if item and item.data(Qt.UserRole) == "GROUP":
+                # Selection is a group → add the new group inside it
                 container = self._get_data_container(target_path)
-                container.append(new_node)
             else:
+                # Selection is a repo → add the new group in the same
+                # container as that repo (sibling level), not inside the repo
                 container = self._get_data_container(target_path[:-1])
-                container.append(new_node)
         else:
-            self.workspace_data.append(new_node)
+            container = self.workspace_data
+
+        # Use _insert_sorted so the new group lands before any loose repos
+        # that may already exist in the container.
+        open_state = self._get_expansion_state()
+        self._insert_sorted(container, new_node)
 
         self._rebuild_tree()
+        self._apply_expansion_state(open_state)
         self._save_virtual_layout()
-        self.tree.expandAll()
 
     # ── Virtual Layout Persistence ────────────────────────────────────────────
 
@@ -1229,8 +1315,8 @@ class MainWindow(QMainWindow):
                 d.setForeground(QColor("#444444"))
 
         op_labels = {
-            "status": "Status", "fetch": "Fetch", "pull": "Pull",
-            "clean": "Clean", "checkout": "Checkout", "ci": "CI Pipelines"
+            "status": "Status", "fetch": "Fetch", "sync": "Sync", "pull": "Pull",
+            "push": "Push", "clean": "Clean", "checkout": "Checkout", "ci": "CI Pipelines"
         }
         self._set_status(
             f"{op_labels.get(operation, operation)}",
@@ -1268,8 +1354,9 @@ class MainWindow(QMainWindow):
             "CLEAN": "#3FB950",
             "MODIFIED": "#F0A033",
             "CLEANED": "#3FB950",
-            "AHEAD": "#F0A033",
-            "BEHIND": "#F0A033",
+            "AHEAD": "#3FB950",           # Green: You are ahead, ready to push
+            "BEHIND": "#BC8CFF",          # Purple: Remote has changes
+            "DIVERGENT": "#BC8CFF",       # Purple: Both ahead and behind
             "CONFLICT": "#F85149",
             "ERROR": "#F85149",
             "FETCH_UPDATE": "#BC8CFF",
@@ -1419,7 +1506,6 @@ class MainWindow(QMainWindow):
         for r in self.found_repos:
             if r not in mapped:
                 self._create_repo_row(root, r)
-        self.tree.expandAll()
         self._set_status("Import complete", f"{len(self.found_repos)} repos loaded", "", "#3FB950")
 
     def _set_buttons_enabled(self, enabled):
