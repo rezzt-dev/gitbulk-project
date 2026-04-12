@@ -1,6 +1,8 @@
 # archivos de compilación de PyInstaller
 build/
 .exe
+dist/linux/gitbulk-gui-linux
+dist/linux/gitbulk-linux
 
 # entornos virtuales de Python
 venv/
