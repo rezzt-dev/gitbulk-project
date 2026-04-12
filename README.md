@@ -13,7 +13,7 @@ GitBulk es una herramienta integral (cli y gui) diseñada para la gestión concu
 
 ---
 
-## 🚀 instalación rápida (producción)
+## instalación rápida (producción)
 
 puedes desplegar el entorno completo con un solo comando en tu terminal:
 
