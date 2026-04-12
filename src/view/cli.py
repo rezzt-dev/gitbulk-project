@@ -47,13 +47,23 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
 
   parser.add_argument(
     "operation",
-    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch", "clean", "checkout", "ci-status", "workspace"],
+    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch", "clean", "checkout", "ci-status", "workspace", "groups", "commit", "push"],
     help = "The primary Git operation to iterate across the active workspace."
   )
 
   parser.add_argument(
+    "-m", "--message",
+    help = "Commit message title (used only for 'commit' operation)."
+  )
+
+  parser.add_argument(
+    "-D", "--body",
+    help = "Commit message body (used only for 'commit' operation)."
+  )
+
+  parser.add_argument(
     "--action",
-    choices = ["save", "load", "list", "delete"],
+    choices = ["save", "load", "list", "delete", "sync"],
     help = "The specific action for the 'workspace' operation."
   )
 
@@ -111,6 +121,18 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
     )
   )
 
+  parser.add_argument(
+    "--group",
+    type = str,
+    help = "filter operations to only include repositories in this specific group (defined in .gitbulk.repo.json or workspace)."
+  )
+
+  parser.add_argument(
+    "-i", "--interactive",
+    action = "store_true",
+    help = "enable interactive mode for 'commit' operation (step-by-step review)."
+  )
+
   return parser.parse_args()
 
 def prompt_for_credentials() -> Tuple[str, str]:
@@ -120,6 +142,43 @@ def prompt_for_credentials() -> Tuple[str, str]:
   username = input("GitHub username: ")
   token = getpass.getpass("Password or Token: ")
   return username, token
+
+def show_interactive_prompt(repo_path, status):
+    """
+    Shows a fancy interactive prompt for a repository.
+    """
+    repo_name = os.path.basename(repo_path)
+    console.print(f"\n[bold cyan]─── {repo_name} ───[/bold cyan]")
+    console.print(f"Status: [yellow]{status}[/yellow]")
+    
+    table = Table(box=None, padding=(0, 2))
+    table.add_column("Option", style="bold green")
+    table.add_column("Action", style="dim")
+    
+    table.add_row("(y)es", "Commit with default message")
+    table.add_row("(n)o", "Skip this repository")
+    table.add_row("(e)dit", "Open system editor for custom message")
+    table.add_row("(d)iff", "Show Git diff summary")
+    table.add_row("(s)kip all", "Cancel all remaining commits")
+    table.add_row("(q)uit", "Exit GitBulk")
+    
+    console.print(table)
+    
+    from model.interactive import get_cli_input
+    # Use 'y' as default if they just press Enter
+    return get_cli_input("Action?", options=['y', 'n', 'e', 'd', 's', 'q'])
+
+def show_git_diff(repo_path):
+    """Shows a simplified git diff for the repo."""
+    try:
+        import subprocess
+        # Get diff summary
+        diff = subprocess.check_output(['git', 'diff', '--stat'], cwd=repo_path).decode('utf-8', errors='ignore')
+        if not diff.strip():
+            diff = "No staged/unstaged changes to show (might be untracked files)."
+        console.print(Panel(diff, title="Git Diff Summary", border_style="dim"))
+    except Exception as e:
+        console.print(f"[red]Error showing diff: {e}[/red]")
 
 def show_auth_success(username: str) -> None:
   console.print(f"\n[bold green]OK[/bold green] Credentials for [cyan]{username}[/cyan] saved globally.")
@@ -162,6 +221,10 @@ def show_result(status: str, detail: str, repo_path: str, output: str) -> None:
     console.print(f"[bold blue][SYNC+STASH][/bold blue]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "STASH_CONFLICT":
     console.print(f"[bold yellow][STASH CONFLICT][/bold yellow]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "COMMITTED":
+    console.print(f"[bold blue][COMMITTED][/bold blue]{detail_str} [cyan]{repo_name}[/cyan]")
+  elif status == "PUSHED":
+    console.print(f"[bold green][PUSHED][/bold green]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "CLEANED":
     console.print(f"[bold magenta][CLEANED][/bold magenta]{detail_str} [cyan]{repo_name}[/cyan]")
   elif status == "SIMULATED":
@@ -232,6 +295,8 @@ def show_summary(counts: dict) -> None:
   if counts.get('STASH_RESTORED', 0) > 0:table.add_row("[bold blue]Synced (Autostash)[/bold blue]",    str(counts['STASH_RESTORED']))
   if counts.get('CLEANED', 0) > 0:       table.add_row("[bold magenta]Cleaned / Pruned[/bold magenta]", str(counts['CLEANED']))
   if counts.get('CHECKOUT', 0) > 0:      table.add_row("[bold cyan]Checked Out[/bold cyan]",            str(counts['CHECKOUT']))
+  if counts.get('COMMITTED', 0) > 0:     table.add_row("[bold blue]Committed[/bold blue]",              str(counts['COMMITTED']))
+  if counts.get('PUSHED', 0) > 0:        table.add_row("[bold green]Pushed[/bold green]",               str(counts['PUSHED']))
   if counts.get('IGNORED', 0) > 0:       table.add_row("[dim white]Ignored[/dim white]",                str(counts['IGNORED']))
   if counts.get('CONFLICT', 0) > 0:      table.add_row("[bold yellow]Local Conflicts[/bold yellow]",    str(counts['CONFLICT']))
   if counts.get('STASH_CONFLICT', 0) > 0:table.add_row("[bold yellow]Autostash Conflicts[/bold yellow]",str(counts['STASH_CONFLICT']))
@@ -240,6 +305,61 @@ def show_summary(counts: dict) -> None:
 
   console.print("\n")
   console.print(table)
+
+def show_sync_preview(to_clone: list, to_archive: list) -> bool:
+  """
+  Shows a preview of the sync operation and asks for confirmation.
+  """
+  from rich.table import Table
+  from rich.prompt import Confirm
+  
+  if not to_clone and not to_archive:
+    console.print("\n[bold green]Workspace is already perfectly synced with the reference file.[/bold green]\n")
+    return False
+
+  table = Table(title="[bold yellow]Sync Preview[/bold yellow]", show_header=True)
+  table.add_column("Repository", style="cyan")
+  table.add_column("Action", justify="center")
+  table.add_column("Detail", style="dim")
+
+  for path, info in to_clone:
+    table.add_row(path, "[bold green]CLONE[/bold green]", f"from {info.get('url', 'N/A')}")
+    
+  for path in to_archive:
+    table.add_row(path, "[bold red]ARCHIVE[/bold red]", "Move to .gitbulk_archive/")
+
+  console.print(table)
+  console.print("\n[bold red]WARNING:[/bold red] ARCHIVE moves the above folders to a timestamped backup folder.")
+  
+  try:
+    return Confirm.ask("[bold yellow]Do you want to proceed with this sync?[/bold yellow]")
+  except (KeyboardInterrupt, EOFError):
+    return False
+
+
+def show_groups_summary(topology: dict) -> None:
+  """Displays a structured overview of all discovered groups and their repositories."""
+  from rich.tree import Tree
+  import os
+  
+  console.print("\n[bold magenta]Group Topology Inspector[/bold magenta]")
+  if not topology:
+      console.print("[dim]No organizational data found.[/dim]")
+      return
+
+  root_tree = Tree("[bold cyan]Workspace Groups[/bold cyan]")
+  
+  # Sort groups alphabetically, but put Uncategorized last
+  sorted_groups = sorted(topology.keys(), key=lambda x: (1 if x == "Uncategorized" else 0, x.lower()))
+  
+  for g_name in sorted_groups:
+      group_node = root_tree.add(f"[bold yellow]{g_name}[/bold yellow] [dim]({len(topology[g_name])} repos)[/dim]")
+      for repo in topology[g_name]:
+          repo_name = os.path.basename(repo["path"])
+          group_node.add(f"[cyan]{repo_name}[/cyan] [dim]({repo['path']})[/dim]")
+  
+  console.print(root_tree)
+  console.print("\n")
 
 def show_branches_compact(results: list) -> None:
   """Displays an ultra-compact one-line-per-repository branch topology view."""

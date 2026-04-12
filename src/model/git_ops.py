@@ -106,7 +106,7 @@ def _parse_porcelain_v2(output: str) -> Dict[str, str]:
 
 # --- HIGH-LEVEL OPERATIONS ---
 
-def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False, autostash: bool = False, target_branch: str = None, dry_run: bool = False) -> Tuple[str, str, str, str]:
+def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False, autostash: bool = False, target_branch: str = None, dry_run: bool = False, **kwargs) -> Tuple[str, str, str, str]:
     try:
         if not os.path.exists(os.path.join(repo_path, ".git")):
             return "ERROR", "Not a Git directory", repo_path, ""
@@ -193,6 +193,45 @@ def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False
                 return "CHECKOUT", "Tracking remote", repo_path, stdout
                 
             return "IGNORED", "Branch not found", repo_path, parse_git_error(stderr)
+
+        if operation == "commit":
+            # 1. Check if dirty
+            code, stdout, stderr = _run_git_command(["status", "--porcelain=v2"], repo_path)
+            state = _parse_porcelain_v2(stdout)
+            
+            if not state["is_dirty"]:
+                return "OK", "Nothing to commit", repo_path, "Working tree clean"
+            
+            # 2. Add all changes
+            _run_git_command(["add", "."], repo_path)
+            
+            # 3. Commit
+            msg = kwargs.get("message", "GitBulk: Bulk update")
+            body = kwargs.get("body", "")
+            cmd = ["commit", "-m", msg]
+            if body:
+                cmd.extend(["-m", body])
+            
+            code, stdout, stderr = _run_git_command(cmd, repo_path)
+            if code == 0:
+                return "COMMITTED", "Changes saved", repo_path, stdout
+            else:
+                return "ERROR", "Commit failed", repo_path, parse_git_error(stderr)
+
+        if operation == "push":
+            # 1. Check if ahead (to avoid unnecessary network calls)
+            code, stdout, stderr = _run_git_command(["status", "--porcelain=v2", "--branch"], repo_path)
+            state = _parse_porcelain_v2(stdout)
+            
+            if state["ahead"] == 0:
+                return "OK", "Already synced", repo_path, "Local branch is NOT ahead of origin"
+            
+            # 2. Push current HEAD to origin
+            code, stdout, stderr = _run_git_command(["push", "origin", "HEAD"], repo_path)
+            if code == 0:
+                return "PUSHED", "Uploaded to origin", repo_path, stdout
+            else:
+                return "ERROR", "Push failed", repo_path, parse_git_error(stderr)
 
         return "ERROR", "Unknown op", repo_path, ""
 

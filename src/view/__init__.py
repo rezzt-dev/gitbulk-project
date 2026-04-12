@@ -17,6 +17,10 @@ from .cli import (
   show_auth_success,
   show_branches_compact,
   show_ci_compact,
+  show_groups_summary,
+  show_sync_preview,
+  show_interactive_prompt,
+  show_git_diff,
   console
 )
 
@@ -34,5 +38,9 @@ __all__ = [
   "show_auth_success",
   "show_branches_compact",
   "show_ci_compact",
+  "show_groups_summary",
+  "show_sync_preview",
+  "show_interactive_prompt",
+  "show_git_diff",
   "console"
 ]

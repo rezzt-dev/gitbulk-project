@@ -31,9 +31,12 @@ from view import (
     show_auth_success,
     console,
     show_branches_compact,
-    show_ci_compact
+    show_ci_compact,
+    show_sync_preview,
+    show_interactive_prompt,
+    show_git_diff
 )
-from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches, get_github_token, get_ci_status, calculate_optimal_workers, ensure_ssh_agent, test_ssh_connectivity
+from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches, get_github_token, get_ci_status, calculate_optimal_workers, ensure_ssh_agent, test_ssh_connectivity, get_groups_topology, archive_repository, open_external_editor
 
 def main():
   # Auto-launch GUI if frozen (PyInstaller) and no arguments
@@ -150,16 +153,26 @@ def main():
                 console.print("\n[bold red]Error: 'save' action requires a --name.[/bold red]")
                 sys.exit(1)
             
-            repos = find_git_repos(target_dir)
-            if not repos:
+            # Scan and possibly filter by group
+            raw_repos = find_git_repos(target_dir)
+            if not raw_repos:
                 show_no_repos_found(target_dir)
                 sys.exit(0)
+
+            # Filtering logic
+            if getattr(args, "group", None):
+                repos = [r["path"] for r in raw_repos if args.group in r["metadata"].get("groups", [])]
+                if not repos:
+                    console.print(f"\n[bold yellow]No repositories found belonging to group: '{args.group}'[/bold yellow]")
+                    sys.exit(0)
+            else:
+                repos = [r["path"] for r in raw_repos]
 
             show_start_processing(len(repos), "Saving Workspace")
             snapshot = []
             
             with Progress(
-                SpinnerColumn(),
+                SpinnerColumn("dots"),
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
@@ -227,7 +240,7 @@ def main():
             show_start_processing(len(repos_to_clone), "loading")
             
             with Progress(
-                SpinnerColumn(),
+                SpinnerColumn("dots"),
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
@@ -251,19 +264,101 @@ def main():
             show_summary(counts)
             sys.exit(0)
 
+        if args.action == "sync":
+            # 1. Determine local state
+            raw_repos = find_git_repos(target_dir)
+            
+            # 2. Determine target state (from file or workspace name)
+            snapshot = []
+            if args.name and args.name in workspaces:
+                snapshot = workspaces[args.name]
+            elif args.file and os.path.exists(args.file):
+                with open(args.file, "r", encoding="utf-8") as f:
+                    snapshot = json.load(f)
+            else:
+                console.print(f"\n[bold red]Error: 'sync' action requires a valid snapshot file (-f) or workspace name (-n).[/bold red]")
+                sys.exit(1)
+                
+            # Maps for comparison (relative path -> info)
+            expected_map = {os.path.normpath(r["path"]): r for r in snapshot}
+            local_map = {os.path.normpath(os.path.relpath(r["path"], target_dir)): r["path"] for r in raw_repos}
+            
+            to_clone = []
+            for rel_path, info in expected_map.items():
+                if rel_path not in local_map:
+                    abs_path = os.path.normpath(os.path.join(target_dir, rel_path))
+                    to_clone.append((abs_path, info))
+                    
+            to_archive = []
+            for rel_path, abs_path in local_map.items():
+                if rel_path not in expected_map:
+                    to_archive.append(abs_path)
+                    
+            # 3. Preview
+            if not show_sync_preview(to_clone, to_archive):
+                sys.exit(0)
+                
+            # 4. Execute Archive
+            if to_archive:
+                console.print(f"\n[bold yellow]Archiving {len(to_archive)} repositories...[/bold yellow]")
+                for path in to_archive:
+                    ok, detail = archive_repository(path, target_dir)
+                    if ok:
+                        console.print(f"  [green]Moved[/green] {os.path.basename(path)} -> {detail}")
+                    else:
+                        console.print(f"  [red]Failed[/red] {os.path.basename(path)}: {detail}")
+
+            # 5. Execute Clone
+            if to_clone:
+                show_start_processing(len(to_clone), "loading (sync)")
+                with Progress(
+                    SpinnerColumn("dots"),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TaskProgressColumn(),
+                    TimeElapsedColumn(),
+                    console=console,
+                    transient=False
+                ) as progress:
+                  task = progress.add_task(f"[bold cyan]Restoring missing...", total=len(to_clone))
+                  with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
+                    futures = {
+                       executor.submit(clone_repo, path, info): path
+                       for path, info in to_clone
+                    }
+                    counts = {'OK': 0, 'CLEAN': 0, 'ERROR': 0}
+                    for future in as_completed(futures):
+                        status, detail, repo_path, output = future.result()
+                        counts[status] = counts.get(status, 0) + 1
+                        show_result(status, detail, repo_path, output)
+                        progress.advance(task, 1)
+                show_summary(counts)
+                
+            console.print("\n[bold green]Sync operation complete.[/bold green]")
+            sys.exit(0)
+
     if args.operation == "export":
-        repos = find_git_repos(target_dir)
-        if not repos:
+        raw_repos = find_git_repos(target_dir)
+        if not raw_repos:
            show_no_repos_found(target_dir)
            if log_file: log_file.write("No repositories found.\n")
            sys.exit(0)
+
+        # Filtering logic
+        if getattr(args, "group", None):
+            repos = [r["path"] for r in raw_repos if args.group in r["metadata"].get("groups", [])]
+            if not repos:
+                console.print(f"\n[bold yellow]No repositories found belonging to group: '{args.group}'[/bold yellow]")
+                sys.exit(0)
+        else:
+            repos = [r["path"] for r in raw_repos]
 
         show_start_processing(len(repos), args.operation)
         snapshot = []
         counts = {"OK": 0}
         
         with Progress(
-            SpinnerColumn(),
+            SpinnerColumn("dots"),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
@@ -347,7 +442,7 @@ def main():
         show_start_processing(len(repos_to_clone), args.operation)
         
         with Progress(
-            SpinnerColumn(),
+            SpinnerColumn("dots"),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
@@ -370,17 +465,26 @@ def main():
         sys.exit(0)
 
     if args.operation == "current-branch":
-        repos = find_git_repos(target_dir)
-        if not repos:
+        raw_repos = find_git_repos(target_dir)
+        if not raw_repos:
            show_no_repos_found(target_dir)
            if log_file: log_file.write("No se encontraron repositorios.\n")
            sys.exit(0)
+
+        # Filtering logic
+        if getattr(args, "group", None):
+            repos = [r["path"] for r in raw_repos if args.group in r["metadata"].get("groups", [])]
+            if not repos:
+                console.print(f"\n[bold yellow]No se encontraron repositorios en el grupo: '{args.group}'[/bold yellow]")
+                sys.exit(0)
+        else:
+            repos = [r["path"] for r in raw_repos]
            
         show_start_processing(len(repos), "Analisis de ramas")
         
         results_queue = []
         with Progress(
-            SpinnerColumn(),
+            SpinnerColumn("dots"),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
@@ -413,17 +517,26 @@ def main():
             console.print("[yellow]Please run 'gitbulk auth' first to save your global credentials (PAT).[/yellow]\n")
             sys.exit(1)
             
-        repos = find_git_repos(target_dir)
-        if not repos:
+        raw_repos = find_git_repos(target_dir)
+        if not raw_repos:
            show_no_repos_found(target_dir)
            if log_file: log_file.write("No repositorios.\n")
            sys.exit(0)
+
+        # Filtering logic
+        if getattr(args, "group", None):
+            repos = [r["path"] for r in raw_repos if args.group in r["metadata"].get("groups", [])]
+            if not repos:
+                console.print(f"\n[bold yellow]No se encontraron repositorios en el grupo: '{args.group}'[/bold yellow]")
+                sys.exit(0)
+        else:
+            repos = [r["path"] for r in raw_repos]
            
         show_start_processing(len(repos), "Consulta de Github Actions")
         
         results_queue = []
         with Progress(
-            SpinnerColumn(),
+            SpinnerColumn("dots"),
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
@@ -432,6 +545,13 @@ def main():
             transient=False
         ) as progress:
            task = progress.add_task(f"[bold cyan]Analizando pipelines...", total=len(repos))
+           kwargs = {
+            "autostash": getattr(args, "autostash", False),
+            "target_branch": getattr(args, "branch", None),
+            "dry_run": getattr(args, "dry_run", False),
+            "message": getattr(args, "message", None),
+            "body": getattr(args, "body", None)
+           }
            with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
                future_to_repo = {
                    executor.submit(get_ci_status, repo, token): repo for repo in repos
@@ -450,19 +570,35 @@ def main():
         sys.exit(0)
 
 
-    repos = find_git_repos(target_dir)
+    if args.operation == "groups":
+        show_welcome(target_dir, "Groups Inspector")
+        topology = get_groups_topology(target_dir)
+        from view import show_groups_summary
+        show_groups_summary(topology)
+        sys.exit(0)
 
-    if not repos:
-      show_no_repos_found(target_dir)
-      if log_file: log_file.write("No repositories found.\n")
-      sys.exit(0)
+    # Default operations (fetch, pull, status, clean, checkout)
+    raw_repos = find_git_repos(target_dir)
+    if not raw_repos:
+        show_no_repos_found(target_dir)
+        if log_file: log_file.write("No se encontraron repositorios.\n")
+        sys.exit(0)
+
+    # Filtering logic
+    if getattr(args, "group", None):
+        repos = [r["path"] for r in raw_repos if args.group in r["metadata"].get("groups", [])]
+        if not repos:
+            console.print(f"\n[bold yellow]No se encontraron repositorios en el grupo: '{args.group}'[/bold yellow]")
+            sys.exit(0)
+    else:
+        repos = [r["path"] for r in raw_repos]
     
     show_start_processing(len(repos), args.operation)
 
     repos_needing_auth = []
 
     with Progress(
-        SpinnerColumn(),
+        SpinnerColumn("dots"),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         TaskProgressColumn(),
@@ -470,6 +606,52 @@ def main():
         console=console,
         transient=False
     ) as progress:
+      # --- SPECIAL CASE: INTERACTIVE COMMIT ---
+      if args.operation == "commit" and getattr(args, "interactive", False):
+          progress.stop() # Suspend progress bar for interaction
+          for repo_path in repos:
+              # 1. Check status first (to skip clean repos)
+              status, detail, _, output = run_git_operation(repo_path, "status")
+              if status == "OK" and "CLEAN" in detail:
+                  continue
+              
+              action = show_interactive_prompt(repo_path, detail)
+              
+              if action == 'q':
+                  sys.exit(0)
+              elif action == 's':
+                  break
+              elif action == 'n':
+                  continue
+              elif action == 'd':
+                  show_git_diff(repo_path)
+                  # Re-prompt after diff
+                  action = show_interactive_prompt(repo_path, detail)
+                  if action in ['q', 's', 'n']: continue # Handle transition
+              
+              # Execute commit (either 'y' or 'e')
+              msg = getattr(args, 'message', "")
+              body = getattr(args, 'body', "")
+              
+              if action == 'e':
+                  content = open_external_editor(f"{msg}\n\n{body}" if msg else "", repo_path)
+                  if not content:
+                      console.print("[yellow]Empty message, skipping commit.[/yellow]")
+                      continue
+                  # Split first line as title
+                  parts = content.split('\n', 1)
+                  msg = parts[0].strip()
+                  body = parts[1].strip() if len(parts) > 1 else ""
+                  
+              res_status, res_detail, _, res_output = run_git_operation(
+                  repo_path, "commit", message=msg, body=body
+              )
+              handle_result(res_status, res_detail, repo_path, res_output)
+          
+          show_summary(counts)
+          sys.exit(0)
+
+      # --- DEFAULT PARALLEL LOOP ---
       task = progress.add_task(f"[bold cyan]Ejecutando {args.operation.upper()}...", total=len(repos))
       with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
         future_to_repo = {
@@ -480,7 +662,9 @@ def main():
               False,
               getattr(args, 'autostash', False),
               getattr(args, 'branch', None),
-              getattr(args, 'dry_run', False)
+              getattr(args, 'dry_run', False),
+              message=getattr(args, 'message', None),
+              body=getattr(args, 'body', None)
           ): repo 
           for repo in repos
         }
@@ -502,7 +686,16 @@ def main():
       for repo_path in repos_needing_auth:
         show_auth_fallback_start(repo_path)
         # Ejecucion secuencial permitiendo prompts interactivos
-        status, detail, _, output = run_git_operation(repo_path, args.operation, allow_prompt=True)
+        status, detail, _, output = run_git_operation(
+            repo_path, 
+            args.operation, 
+            allow_prompt=True,
+            autostash=getattr(args, 'autostash', False),
+            target_branch=getattr(args, 'branch', None),
+            dry_run=getattr(args, 'dry_run', False),
+            message=getattr(args, 'message', None),
+            body=getattr(args, 'body', None)
+        )
         handle_result(status, detail, repo_path, output)
 
     show_summary(counts)

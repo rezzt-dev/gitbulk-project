@@ -3,6 +3,7 @@ import os
 import sys
 import urllib.parse
 from pathlib import Path
+from typing import Tuple
 from rich.console import Console
 from rich.panel import Panel
 

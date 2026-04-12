@@ -2,11 +2,12 @@ import os
 import json
 import time
 from PySide6.QtWidgets import (
-    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
-    QFrame, QLabel, QPushButton, QTreeView, QHeaderView,
-    QAbstractItemView, QSizeGrip, QFileDialog, QInputDialog,
-    QMessageBox, QMenu, QSpacerItem, QSizePolicy, QProgressBar,
-    QDialog, QComboBox
+    QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QFrame, QLabel, 
+    QPushButton, QTreeView, QHeaderView, QAbstractItemView, QSizeGrip, 
+    QFileDialog, QInputDialog, QMessageBox, QMenu, QSpacerItem, 
+    QSizePolicy, QProgressBar, QDialog, QComboBox, QLineEdit, 
+    QTextEdit, QCheckBox, QListWidget, QListWidgetItem, QTreeWidget, 
+    QTreeWidgetItem
 )
 from PySide6.QtCore import Qt, QRect, QRectF, QPointF, QSize, QModelIndex, QTimer
 from PySide6.QtGui import QIcon, QPainter, QPen, QColor, QStandardItemModel, QStandardItem, QFont, QFontDatabase
@@ -29,11 +30,11 @@ except ImportError:
 try:
     from .icon_manager import get_icon
     from .workers import ScannerWorker, OperationWorker
-    from model import calculate_optimal_workers
+    from model import calculate_optimal_workers, ensure_ssh_agent
 except ImportError:
     from gui.icon_manager import get_icon
     from gui.workers import ScannerWorker, OperationWorker
-    from model import calculate_optimal_workers
+    from model import calculate_optimal_workers, find_git_repos, archive_repository, clone_repo, ensure_ssh_agent
 
 
 def _safe_get_metadata(repo_path):
@@ -508,12 +509,16 @@ class MainWindow(QMainWindow):
 
         ops = [
             ("btn_pull",    TR("btn_pull"),          "sync",    "#888888", "pull"),
-            ("btn_push",    TR("btn_push"),          "sync",    "#888888", "push"),
+            ("btn_commit",  TR("btn_commit"),        "sync",    "#58A6FF", "commit"),
+            ("btn_push",    TR("btn_push"),          "sync",    "#4CAF50", "push"),
             ("btn_sync",    TR("btn_sync"),          "sync",    "#888888", "sync"),
         ]
         for attr, label, icon, color, op in ops:
             btn = self._sidebar_btn(f"  {label}", icon, color)
-            btn.clicked.connect(lambda checked=False, o=op: self.start_operation(o))
+            if op == "commit":
+                btn.clicked.connect(self.open_commit_hub)
+            else:
+                btn.clicked.connect(lambda checked=False, o=op: self.start_operation(o))
             setattr(self, attr, btn)
             layout.addWidget(btn)
 
@@ -527,7 +532,7 @@ class MainWindow(QMainWindow):
         self.workspace_list_layout.setSpacing(2)
         layout.addLayout(self.workspace_list_layout)
         
-        self.btn_refresh_workspaces = self._sidebar_btn("  Refresh Workspaces", "sync", "#555555")
+        self.btn_refresh_workspaces = self._sidebar_btn(f"  {TR('btn_refresh_workspaces')}", "sync", "#555555")
         self.btn_refresh_workspaces.clicked.connect(self.refresh_workspaces_ui)
         layout.addWidget(self.btn_refresh_workspaces)
 
@@ -545,7 +550,15 @@ class MainWindow(QMainWindow):
         self.btn_import.clicked.connect(self.import_workspace)
         layout.addWidget(self.btn_import)
 
-        layout.addSpacing(8)
+        self.btn_group_inspector = self._sidebar_btn(f"  {TR('btn_group_inspector')}", "folder", "#888888")
+        self.btn_group_inspector.clicked.connect(self.open_group_summary)
+        layout.addWidget(self.btn_group_inspector)
+
+        self.btn_sync_workspace = self._sidebar_btn(f"  {TR('btn_sync_workspace')}", "sync", "#F0A033")
+        self.btn_sync_workspace.clicked.connect(self.open_workspace_sync)
+        layout.addWidget(self.btn_sync_workspace)
+
+        layout.addStretch()
         layout.addWidget(self._divider())
 
         # ── DANGER section
@@ -625,7 +638,7 @@ class MainWindow(QMainWindow):
         workspaces = config.get("workspaces", {})
         
         if not workspaces:
-            lbl = QLabel(f"  {TR('status_no_workspaces') if 'status_no_workspaces' in TR.data else 'No saved workspaces'}")
+            lbl = QLabel(f"  {TR('status_no_workspaces')}")
             lbl.setStyleSheet("color: #444444; font-family: 'JetBrains Mono'; font-size: 10px; padding: 4px 16px;")
             self.workspace_list_layout.addWidget(lbl)
         else:
@@ -684,11 +697,14 @@ class MainWindow(QMainWindow):
         self.btn_load_dir.setText(f"  {TR('btn_scan')}")
         self.btn_new_group.setText(f"  {TR('btn_group')}")
         self.btn_pull.setText(f"  {TR('btn_pull')}")
+        self.btn_commit.setText(f"  {TR('btn_commit')}")
         self.btn_push.setText(f"  {TR('btn_push')}")
         self.btn_sync.setText(f"  {TR('btn_sync')}")
         self.btn_import.setText(f"  {TR('btn_import')}")
         self.btn_export.setText(f"  {TR('btn_export')}")
         self.btn_clean.setText(f"  {TR('btn_clean')}")
+        self.btn_group_inspector.setText(f"  {TR('btn_group_inspector')}")
+        self.btn_sync_workspace.setText(f"  {TR('btn_sync_workspace')}")
         
         if not self.target_dir:
             self.lbl_workspace_path.setText(TR("status_no_dir_selected"))
@@ -722,7 +738,7 @@ class MainWindow(QMainWindow):
         return btn
 
     def _section_header(self, text_key):
-        lbl = QLabel(TR(text_key).upper())
+        lbl = QLabel(TR(text_key))
         lbl.setStyleSheet(
             "color: #484848; font-family: 'JetBrains Mono'; font-size: 9px; font-weight: 700; "
             "letter-spacing: 1.4px; padding: 10px 16px 4px 16px;"
@@ -956,24 +972,75 @@ class MainWindow(QMainWindow):
         self.scanner_worker.start()
 
     def on_scan_finished(self, repos):
-        self.found_repos = repos
+        # repos is now List[Dict] -> {"path": ..., "metadata": {"groups": [...]}}
+        # We need to keep paths in self.found_repos for the OperationWorker
+        self.raw_scan_results = repos
+        self.found_repos = [r["path"] for r in repos]
+        
         self.lbl_repo_count.setText(f"{len(repos)} {TR('lbl_repos')}")
         self.lbl_repo_count.show()
 
         # ── Synchronize with Data Model
-        # Case A: Imported layout exists
         if self._pending_import_layout is not None:
             self.workspace_data = self._pending_import_layout
             self._pending_import_layout = None
-        # Case B: Load from local persistent cache
         else:
             self.workspace_data = self._load_virtual_layout() or []
+
+        # ── Auto-Group Logic (Integrate Repo Metadata)
+        self._apply_metadata_to_layout()
 
         # ── Global Renderer
         open_state = self._get_expansion_state()
         self._rebuild_tree()
         self._apply_expansion_state(open_state)
         self._set_status(TR("status_loaded"), TR("status_repos_found", count=len(repos)), "", "#4CAF50")
+
+    def _apply_metadata_to_layout(self):
+        """
+        Scans raw_scan_results and ensures any repository with 'groups' in its 
+        metadata is placed in the corresponding folders within self.workspace_data,
+        unless it's already explicitly mapped elsewhere.
+        """
+        # 1. Map current state to a flat set for fast lookup
+        mapped_paths = self._get_mapped_paths(self.workspace_data)
+        
+        for item in self.raw_scan_results:
+            repo_path = item["path"]
+            groups = item["metadata"].get("groups", [])
+            
+            if not groups or repo_path in mapped_paths:
+                continue
+                
+            # If repo is not mapped but has groups → Create/Find the group path
+            # and append the repo there.
+            container = self.workspace_data
+            for g_name in groups:
+                # Find or create group
+                found_g = None
+                for node in container:
+                    if node.get("is_group") and node.get("name") == g_name:
+                        found_g = node
+                        break
+                
+                if not found_g:
+                    found_g = {"name": g_name, "is_group": True, "children": []}
+                    self._insert_sorted(container, found_g)
+                
+                container = found_g["children"]
+            
+            # Add repo to the last container
+            container.append({"name": os.path.basename(repo_path), "path": repo_path})
+
+    def _get_mapped_paths(self, data):
+        """Recursively collects all repository paths already in the data model."""
+        paths = set()
+        for n in data:
+            if n.get("is_group"):
+                paths.update(self._get_mapped_paths(n.get("children", [])))
+            else:
+                paths.add(n.get("path"))
+        return paths
 
     # ── Ordering Helpers (Invariant: groups before loose repos) ──────────────
 
@@ -1393,6 +1460,7 @@ class MainWindow(QMainWindow):
         self._op_start_time = time.time()
         self._processed_count = 0
         self._log_queue.clear()
+        self._current_conflicts = [] # Track conflicts for resolution dialog
         self._ui_timer.start()
 
         total = len(self.found_repos)
@@ -1415,8 +1483,8 @@ class MainWindow(QMainWindow):
                 d.setForeground(QColor("#444444"))
 
         op_labels = {
-            "status": "Status", "fetch": "Fetch", "sync": "Sync", "pull": "Pull",
-            "push": "Push", "clean": "Clean", "checkout": "Checkout", "ci": "CI Pipelines"
+            "status": TR("op_status"), "fetch": TR("op_fetch"), "sync": TR("op_sync"), "pull": TR("op_pull"),
+            "push": TR("op_push"), "clean": TR("op_clean"), "checkout": TR("op_checkout"), "ci": TR("op_ci")
         }
         self._set_status(
             f"{op_labels.get(operation, operation)}",
@@ -1442,6 +1510,8 @@ class MainWindow(QMainWindow):
     def on_log_ready(self, status, detail, repo_path, output):
         # Buffer the log result instead of immediate UI reflow
         self._log_queue.append((status, detail, repo_path, output))
+        if status == "CONFLICT" or "conflict" in detail.lower() or "conflict" in output.lower():
+            self._current_conflicts.append((repo_path, detail, output))
 
     def _process_log_queue(self):
         """Flushes the log queue and updates the UI in a single batch."""
@@ -1453,11 +1523,12 @@ class MainWindow(QMainWindow):
         
         # Color mapping (Pre-calculating to avoid re-lookup)
         color_map = {
-            "OK": "#3FB950", "CLEAN": "#3FB950", "MODIFIED": "#F0A033",
-            "CLEANED": "#3FB950", "AHEAD": "#3FB950", "BEHIND": "#BC8CFF",
-            "DIVERGENT": "#BC8CFF", "CONFLICT": "#F85149", "ERROR": "#F85149",
-            "FETCH_UPDATE": "#BC8CFF", "CHECKOUT": "#3FB950", "IGNORED": "#555555",
-            "SUCCESS": "#3FB950", "FAILED": "#F85149",
+            "OK": "#4CAF50", "CLEAN": "#4CAF50", "MODIFIED": "#F0DF5A",
+            "CLEANED": "#4CAF50", "AHEAD": "#4CAF50", "BEHIND": "#F0DF5A",
+            "DIVERGENT": "#BC8CFF", "CONFLICT": "#FF5252", "ERROR": "#FF5252",
+            "FETCH_UPDATE": "#BC8CFF", "CHECKOUT": "#2196F3", "IGNORED": "#888888",
+            "COMMITTED": "#58A6FF", "PUSHED": "#4CAF50", "SUCCESS": "#4CAF50",
+            "FAILED": "#FF5252"
         }
 
         total = len(self.found_repos)
@@ -1477,7 +1548,7 @@ class MainWindow(QMainWindow):
             
             # Status Column
             s_item = row_items[2]
-            s_item.setText(status)
+            s_item.setText(TR(status.lower()))
             s_item.setForeground(QColor(color))
             
             # Detail Column
@@ -1503,12 +1574,19 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(2000, self.progress_bar.hide)
 
         self._set_status(
-            "Done",
-            f"{count} repositories processed",
+            TR("status_done"),
+            TR("status_processed", count=count),
             f"{elapsed:.1f}s",
             "#3FB950"
         )
         self._set_buttons_enabled(True)
+        
+        # Launch Conflict Hub if needed
+        if self._current_conflicts:
+            dialog = ConflictHubDialog(self._current_conflicts, self)
+            dialog.exec()
+            # Clear for next op
+            self._current_conflicts = []
 
     def start_ci_operation(self):
         token = ""
@@ -1525,7 +1603,7 @@ class MainWindow(QMainWindow):
     def prompt_checkout(self):
         if not self.target_dir:
             return
-        text, ok = QInputDialog.getText(self, "Checkout Branch", "Target branch name:")
+        text, ok = QInputDialog.getText(self, "GitBulk", TR("op_checkout") + ":")
         if ok and text:
             self.start_operation("checkout", kwargs={"target_branch": text.strip()})
 
@@ -1578,12 +1656,12 @@ class MainWindow(QMainWindow):
             with open(path, "r", encoding="utf-8") as f:
                 raw = json.load(f)
         except (json.JSONDecodeError, OSError) as e:
-            QMessageBox.warning(self, "Import Error", f"Could not read the file:\n{e}")
+            QMessageBox.warning(self, "GitBulk", f"{TR('btn_import')} error:\n{e}")
             return
 
         # Format: {"<workspace_dir>": [node, ...]}
         if not isinstance(raw, dict) or not raw:
-            QMessageBox.warning(self, "Import Error", "Invalid workspace file format.")
+            QMessageBox.warning(self, "GitBulk", f"{TR('btn_import')} error: invalid format")
             return
 
         workspace_dir = next(iter(raw))
@@ -1592,10 +1670,10 @@ class MainWindow(QMainWindow):
         if not os.path.isdir(workspace_dir):
             # Ask user whether to use a new base dir
             msg = QMessageBox(self)
-            msg.setWindowTitle("Directory Not Found")
+            msg.setWindowTitle("GitBulk")
             msg.setText(
-                f"The original workspace directory was not found:\n{workspace_dir}\n\n"
-                "Would you like to choose a different root directory?"
+                f"{TR('status_no_dir_selected')}:\n{workspace_dir}\n\n"
+                "choose a different directory?"
             )
             msg.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
             if msg.exec() != QMessageBox.Yes:
@@ -1630,3 +1708,611 @@ class MainWindow(QMainWindow):
         ):
             if hasattr(self, btn.objectName()) or btn is not None:
                 btn.setEnabled(enabled)
+
+    def open_group_summary(self):
+        if not self.target_dir:
+            self._set_status("Select a directory first", color="#F85149")
+            return
+            
+        from model import get_groups_topology
+        topology = get_groups_topology(self.target_dir)
+        
+        # Sort groups: Uncategorized last
+        sorted_groups = sorted(topology.keys(), key=lambda x: (1 if x == "Uncategorized" else 0, x.lower()))
+        
+        dialog = GroupSummaryDialog(topology, self)
+        dialog.exec()
+
+    def open_commit_hub(self):
+        if not self.target_dir or not self.found_repos:
+            self._set_status("No repositories to commit", color="#F85149")
+            return
+            
+        # Collect current state from tree
+        repo_data = [] # List of (path, status_text)
+        for leaf in self._all_leaves():
+            path = leaf.data(Qt.UserRole + 1)
+            parent = leaf.parent() or self.repo_model.invisibleRootItem()
+            status_item = parent.child(leaf.row(), 2)
+            status_text = status_item.text() if status_item else ""
+            repo_data.append((path, status_text))
+            
+        dialog = CommitHubDialog(repo_data, self)
+        if dialog.exec():
+            msg, body, selected_paths = dialog.get_data()
+            if not selected_paths:
+                self._set_status("No repositories selected", color="#F85149")
+                return
+                
+            # Temporarily filter found_repos to only selected ones for this operation
+            original_found = self.found_repos
+            self.found_repos = [r for r in original_found if r in selected_paths]
+            
+            try:
+                self.start_operation("commit", kwargs={"message": msg, "body": body})
+            finally:
+                # Restore original list
+                self.found_repos = original_found
+
+    def open_workspace_sync(self):
+        if not self.target_dir:
+            self._set_status("Load a directory first", color="#F85149")
+            return
+            
+        # 1. Select snapshot
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select Reference Snapshot", "", "JSON files (*.json)")
+        if not file_path:
+            return
+            
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                snapshot = json.load(f)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load snapshot: {e}")
+            return
+            
+        # 2. Compare
+        raw_repos = find_git_repos(self.target_dir)
+        expected_map = {os.path.normpath(r["path"]): r for r in snapshot}
+        local_map = {os.path.normpath(os.path.relpath(r["path"], self.target_dir)): r["path"] for r in raw_repos}
+        
+        to_clone = [] # (abs_path, info)
+        for rel_path, info in expected_map.items():
+            if rel_path not in local_map:
+                abs_path = os.path.normpath(os.path.join(self.target_dir, rel_path))
+                to_clone.append((abs_path, info))
+                
+        to_archive = [] # abs_path
+        for rel_path, abs_path in local_map.items():
+            if rel_path not in expected_map:
+                to_archive.append(abs_path)
+                
+        if not to_clone and not to_archive:
+            QMessageBox.information(self, "Sync", "Workspace is already in sync with the reference.")
+            return
+            
+        # 3. Preview Dialog
+        dialog = SyncPreviewDialog(to_clone, to_archive, self)
+        if dialog.exec():
+            # 4. Execute Archive
+            for path in to_archive:
+                archive_repository(path, self.target_dir)
+                
+            # 5. Execute Clone
+            if to_clone:
+                # Reuse the existing loader logic
+                # For simplicity, we trigger a refresh and then we'd normally clone.
+                # In GUI, we will just show an info message for now or implement cloning here.
+                # Actually, let's just use the OperationWorker if possible or the same clone_repo.
+                for path, info in to_clone:
+                    clone_repo(path, info)
+            
+            QMessageBox.information(self, "Success", "Sync complete. Repositories archived/cloned.")
+            self.refresh_workspace()
+        
+
+    def focus_on_group(self, group_name):
+        """Hides all repositories not part of the specified group."""
+        if not self.found_repos or not self.repo_view: return
+        
+        from model import get_groups_topology
+        topology = get_groups_topology(self.target_dir)
+        
+        if group_name not in topology:
+            # Show all
+            for i in range(self.repo_model.rowCount()):
+                self.repo_view.setRowHidden(i, QModelIndex(), False)
+            self._set_status(f"Showing all repositories", color="#58A6FF")
+            return
+
+        self._set_status(f"Focus: {group_name}", color="#F0DF5A")
+        
+        target_paths = {r["path"] for r in topology[group_name]}
+        root = self.repo_model.invisibleRootItem()
+        for i in range(root.rowCount()):
+            item = root.child(i, 0)
+            if not item: continue
+            
+            repo_path = item.data(Qt.UserRole + 1)
+            is_match = repo_path in target_paths
+            self.repo_view.setRowHidden(i, QModelIndex(), not is_match)
+
+
+# ── Commit Hub Dialog ────────────────────────────────────────────────────────
+
+class CommitHubDialog(QDialog):
+    def __init__(self, repo_data, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(TR("commit_hub_title"))
+        self.setMinimumWidth(950)
+        self.setMinimumHeight(650)
+        self.setStyleSheet("background-color: #0D1117; color: #C9D1D9; font-family: 'Inter', 'Segoe UI';")
+        
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(30,30,30,30)
+        main_layout.setSpacing(24)
+        
+        # Header with Statistics
+        header_layout = QHBoxLayout()
+        header_v = QVBoxLayout()
+        title = QLabel(TR("commit_hub_title"))
+        title.setStyleSheet("font-size: 24px; font-weight: 800; color: #F0F6FC;")
+        header_v.addWidget(title)
+        
+        self.lbl_stats = QLabel(TR("commit_hub_stats", count=0))
+        self.lbl_stats.setStyleSheet("color: #8B949E; font-size: 13px;")
+        header_v.addWidget(self.lbl_stats)
+        header_layout.addLayout(header_v)
+        header_layout.addStretch()
+        
+        # Logo placeholder or Icon integration
+        main_layout.addLayout(header_layout)
+        
+        content_layout = QHBoxLayout()
+        content_layout.setSpacing(40)
+        
+        # --- LEFT PANEL: Message Editor ---
+        form_panel = QFrame()
+        form_panel.setStyleSheet("background-color: #161B22; border-radius: 12px; border: 1px solid #30363D;")
+        form_layout = QVBoxLayout(form_panel)
+        form_layout.setContentsMargins(20, 20, 20, 20)
+        form_layout.setSpacing(15)
+        
+        form_layout.addWidget(QLabel(TR("commit_hub_label_title")))
+        self.edit_title = QLineEdit()
+        self.edit_title.setPlaceholderText(TR("commit_hub_placeholder_title"))
+        self.edit_title.setStyleSheet("background-color: #0D1117; border: 1px solid #388BFD; padding: 12px; font-size: 14px; border-radius: 6px; color: #F0F6FC;")
+        form_layout.addWidget(self.edit_title)
+        
+        form_layout.addWidget(QLabel(TR("commit_hub_label_body")))
+        self.edit_body = QTextEdit()
+        self.edit_body.setPlaceholderText(TR("commit_hub_placeholder_body"))
+        self.edit_body.setStyleSheet("background-color: #0D1117; border: 1px solid #30363D; padding: 12px; font-size: 13px; border-radius: 6px;")
+        form_layout.addWidget(self.edit_body)
+        
+        # Tips Box
+        tips = QFrame()
+        tips.setStyleSheet("background-color: #1F242B; border-radius: 8px;")
+        tips_v = QVBoxLayout(tips)
+        tips_text = QLabel(TR("commit_hub_tip"))
+        tips_text.setStyleSheet("color: #8B949E; font-size: 12px; font-style: italic;")
+        tips_v.addWidget(tips_text)
+        form_layout.addWidget(tips)
+        
+        content_layout.addWidget(form_panel, 4)
+        
+        # --- RIGHT PANEL: Selection & Filtering ---
+        repo_panel = QFrame()
+        repo_layout = QVBoxLayout(repo_panel)
+        repo_layout.setContentsMargins(0, 0, 0, 0)
+        repo_layout.setSpacing(10)
+        
+        search_layout = QHBoxLayout()
+        self.edit_filter = QLineEdit()
+        self.edit_filter.setPlaceholderText(TR("commit_hub_placeholder_search"))
+        self.edit_filter.setStyleSheet("background-color: #161B22; border: 1px solid #30363D; padding: 10px; border-radius: 6px;")
+        self.edit_filter.textChanged.connect(self._on_filter_changed)
+        search_layout.addWidget(self.edit_filter)
+        
+        self.btn_select_dirty = QPushButton(TR("commit_hub_btn_dirty"))
+        self.btn_select_dirty.setFixedWidth(80)
+        self.btn_select_dirty.setStyleSheet("background-color: #21262D; border: 1px solid #30363D; padding: 8px; font-size: 11px;")
+        self.btn_select_dirty.clicked.connect(self._select_dirty)
+        search_layout.addWidget(self.btn_select_dirty)
+        repo_layout.addLayout(search_layout)
+        
+        self.list_widget = QListWidget()
+        self.list_widget.setStyleSheet("background-color: #0D1117; border: 1px solid #30363D; border-radius: 10px; outline: none;")
+        self.list_widget.setSpacing(4)
+        
+        self.checkboxes = {} # path -> QCheckBox
+        self.all_items = []  # List of (item, path, basename)
+        
+        for path, status in repo_data:
+            basename = os.path.basename(path)
+            item = QListWidgetItem(self.list_widget)
+            
+            row_widget = QFrame()
+            row_widget.setObjectName("repoCard")
+            row_widget.setStyleSheet("""
+                #repoCard { background-color: #161B22; border-radius: 8px; border: 1px solid transparent; }
+                #repoCard:hover { border: 1px solid #388BFD; background-color: #1C2128; }
+            """)
+            row_layout = QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(12, 8, 12, 8)
+            
+            cb = QCheckBox(basename)
+            cb.setStyleSheet("font-weight: 600; font-size: 13px; color: #C9D1D9;")
+            cb.stateChanged.connect(self._update_stats)
+            
+            # Pre-select if modified
+            if "MODIFIED" in status or "ahead" in status.lower():
+                cb.setChecked(True)
+                
+            row_layout.addWidget(cb)
+            row_layout.addStretch()
+            
+            status_lbl = QLabel(status)
+            color = "#F0DF5A" if "MODIFIED" in status else "#8B949E"
+            status_lbl.setStyleSheet(f"color: {color}; font-size: 11px; font-weight: bold;")
+            row_layout.addWidget(status_lbl)
+            
+            item.setSizeHint(row_widget.sizeHint())
+            self.list_widget.setItemWidget(item, row_widget)
+            self.checkboxes[path] = cb
+            self.all_items.append((item, path, basename.lower()))
+            
+        repo_layout.addWidget(self.list_widget)
+        content_layout.addWidget(repo_panel, 5)
+        
+        main_layout.addLayout(content_layout)
+        
+        # Footer Actions
+        footer = QHBoxLayout()
+        self.btn_cancel = QPushButton(TR("commit_hub_btn_discard"))
+        self.btn_cancel.clicked.connect(self.reject)
+        self.btn_cancel.setStyleSheet("color: #8B949E; background: transparent; padding: 12px; font-weight: bold;")
+        
+        self.btn_commit = QPushButton(TR("commit_hub_btn_confirm"))
+        self.btn_commit.setFixedWidth(260)
+        self.btn_commit.clicked.connect(self.accept)
+        self.btn_commit.setStyleSheet("""
+            QPushButton { background-color: #238636; color: white; border-radius: 8px; padding: 15px; font-weight: 800; font-size: 14px; }
+            QPushButton:hover { background-color: #2EA043; }
+            QPushButton:pressed { background-color: #26a641; }
+        """)
+        
+        footer.addStretch()
+        footer.addWidget(self.btn_cancel)
+        footer.addWidget(self.btn_commit)
+        main_layout.addLayout(footer)
+        
+        self._update_stats()
+
+    def _on_filter_changed(self, text):
+        search = text.lower()
+        for item, path, name in self.all_items:
+            item.setHidden(search not in name)
+
+    def _update_stats(self):
+        count = sum(1 for cb in self.checkboxes.values() if cb.isChecked())
+        self.lbl_stats.setText(TR("commit_hub_stats", count=count))
+        self.btn_commit.setEnabled(count > 0)
+
+    def _select_dirty(self):
+        for item, path, name in self.all_items:
+            # Re-check status from row widget if available or we can use another way.
+            # For simplicity, we'll iterate the checkboxes.
+            # If the status label in the row widget contains MODIFIED...
+            row_widget = self.list_widget.itemWidget(item)
+            if row_widget:
+                status_lbl = row_widget.findChild(QLabel)
+                if status_lbl and ("MODIFIED" in status_lbl.text() or "commits" in status_lbl.text()):
+                    self.checkboxes[path].setChecked(True)
+
+    def get_data(self):
+        selected = [p for p, cb in self.checkboxes.items() if cb.isChecked()]
+        return self.edit_title.text().strip(), self.edit_body.toPlainText().strip(), selected
+
+# ── Conflict Resolution Dialog ───────────────────────────────────────────────
+
+class ConflictHubDialog(QDialog):
+    def __init__(self, conflict_data, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(TR("conflict_hub_title"))
+        self.setMinimumWidth(800)
+        self.setMinimumHeight(500)
+        self.setStyleSheet("background-color: #0D1117; color: #C9D1D9; font-family: 'JetBrains Mono';")
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(30,30,30,30)
+        layout.setSpacing(20)
+        
+        header = QLabel(TR("conflict_hub_header"))
+        header.setStyleSheet("font-size: 22px; font-weight: bold; color: #FF7B72;")
+        layout.addWidget(header)
+        
+        desc = QLabel(TR("conflict_hub_desc"))
+        desc.setWordWrap(True)
+        desc.setStyleSheet("color: #8B949E; font-size: 13px;")
+        layout.addWidget(desc)
+        
+        from PySide6.QtWidgets import QListWidget, QListWidgetItem
+        self.list_widget = QListWidget()
+        self.list_widget.setStyleSheet("background-color: #161B22; border: 1px solid #30363D; border-radius: 8px; outline: none;")
+        
+        for path, detail, output in conflict_data:
+            item = QListWidgetItem(self.list_widget)
+            
+            card = QFrame()
+            card.setStyleSheet("background-color: #0D1117; margin: 5px; border-radius: 6px; border: 1px solid #FF7B72;")
+            item_ly = QHBoxLayout(card)
+            
+            info_v = QVBoxLayout()
+            name_lbl = QLabel(os.path.basename(path))
+            name_lbl.setStyleSheet("font-weight: bold; font-size: 14px; color: #F0F6FC;")
+            info_v.addWidget(name_lbl)
+            
+            err_lbl = QLabel(detail)
+            err_lbl.setStyleSheet("color: #FF7B72; font-size: 11px;")
+            info_v.addWidget(err_lbl)
+            item_ly.addLayout(info_v)
+            
+            item_ly.addStretch()
+            
+            # Actions
+            btn_folder = QPushButton(TR("conflict_hub_btn_explorer"))
+            btn_folder.setFixedWidth(90)
+            btn_folder.setStyleSheet("background-color: #21262D; border: 1px solid #30363D; padding: 6px;")
+            btn_folder.clicked.connect(lambda checked=False, p=path: self._open_folder(p))
+            item_ly.addWidget(btn_folder)
+            
+            btn_solve = QPushButton(TR("conflict_hub_btn_solve"))
+            btn_solve.setFixedWidth(90)
+            btn_solve.setStyleSheet("background-color: #388BFD; color: white; border: none; padding: 6px; font-weight: bold;")
+            btn_solve.clicked.connect(lambda checked=False, p=path: self._solve_in_editor(p))
+            item_ly.addWidget(btn_solve)
+            
+            btn_abort = QPushButton(TR("conflict_hub_btn_abort"))
+            btn_abort.setFixedWidth(90)
+            btn_abort.setStyleSheet("background-color: #BF4440; color: white; border: none; padding: 6px;")
+            btn_abort.clicked.connect(lambda checked=False, p=path: self._abort_merge(p))
+            item_ly.addWidget(btn_abort)
+            
+            item.setSizeHint(card.sizeHint())
+            self.list_widget.setItemWidget(item, card)
+            
+        layout.addWidget(self.list_widget)
+        
+        btn_close = QPushButton(TR("conflict_hub_btn_close"))
+        btn_close.setStyleSheet("background-color: #238636; color: white; padding: 12px; font-weight: bold; border-radius: 6px;")
+        btn_close.clicked.connect(self.accept)
+        layout.addWidget(btn_close)
+
+    def _open_folder(self, path):
+        import os
+        if os.name == 'nt':
+            os.startfile(path)
+        else:
+            import subprocess
+            subprocess.Popen(['xdg-open', path])
+
+    def _solve_in_editor(self, path):
+        # We launch the editor in a separate process so we don't block the UI
+        try:
+            from model import open_external_editor
+            # Note: GUI version of open_external_editor shouldn't be blocking in a way that hangs UI.
+            # But the 'subprocess.call' in my model is blocking.
+            # For GUI, I should probably just launch the editor and not wait for content if we just want them to solve conflicts.
+            editor = os.environ.get('EDITOR') or ('notepad.exe' if os.name == 'nt' else 'nano')
+            import subprocess
+            subprocess.Popen([editor, path]) # Open the folder in editor or the conflicted path
+        except Exception as e:
+            QMessageBox.critical(self, "GitBulk", TR("conflict_hub_err_editor", e=e))
+
+    def _abort_merge(self, path):
+        try:
+            from model import run_git_operation
+            run_git_operation(path, "run_raw", cmd=["merge", "--abort"])
+            QMessageBox.information(self, "GitBulk", TR("conflict_hub_msg_aborted", name=os.path.basename(path)))
+        except Exception as e:
+             QMessageBox.critical(self, "GitBulk", TR("conflict_hub_err_abort", e=e))
+
+# ── Group Inspector Dialog ───────────────────────────────────────────────────
+
+class GroupSummaryDialog(QDialog):
+    def __init__(self, topology, parent=None):
+        super().__init__(parent)
+        from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem
+        self.setWindowTitle(TR("dlg_group_inspector_title"))
+        self.resize(500, 600)
+        self.setStyleSheet("background-color: #0F0F0F; color: #EEEEEE; font-family: 'JetBrains Mono';")
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        header = QLabel(TR("dlg_group_inspector_header"))
+        header.setStyleSheet("font-size: 16px; font-weight: bold; color: #E2E2E2; margin-bottom: 10px;")
+        layout.addWidget(header)
+        
+        tree = QTreeWidget()
+        tree.setColumnCount(1)
+        tree.setHeaderHidden(True)
+        tree.setStyleSheet("""
+            QTreeWidget { background-color: #161616; border: 1px solid #262626; padding: 10px; }
+            QTreeWidget::item { padding: 4px; }
+        """)
+        
+        # Sort groups: Uncategorized last
+        sorted_groups = sorted(topology.keys(), key=lambda x: (1 if x == "Uncategorized" else 0, x.lower()))
+        
+        for group_name in sorted_groups:
+            repos = topology[group_name]
+            g_item = QTreeWidgetItem(tree)
+            g_item.setText(0, f"{group_name} ({len(repos)})")
+            g_item.setFont(0, QFont("JetBrains Mono", 11, QFont.Bold))
+
+            for r in repos:
+                r_name = os.path.basename(r["path"])
+                r_item = QTreeWidgetItem(g_item)
+                r_item.setText(0, r_name)
+                r_item.setForeground(0, QColor("#E2E2E2"))
+                r_item.setToolTip(0, r["path"])
+                
+                # Fetch live status from parent (MainWindow)
+                if isinstance(parent, QMainWindow):
+                    status_text = "—"
+                    node = parent._find_repo_node(r["path"])
+                    if node:
+                        m = parent.repo_model
+                        row = node.row()
+                        p = node.parent() or m.invisibleRootItem()
+                        st_item = p.child(row, 2)
+                        status_text = st_item.text() if st_item else "—"
+                    
+                    # Status dot icon
+                    dot_color = "#58A6FF" # Clean
+                    if "MODIFIED" in status_text or "commits" in status_text:
+                        dot_color = "#F0DF5A"
+                    elif "ERROR" in status_text:
+                        dot_color = "#F85149"
+                    
+                    r_item.setIcon(0, get_icon("dot", dot_color))
+        
+        layout.addWidget(tree)
+        
+        btn_close = QPushButton(TR("dlg_group_inspector_btn_close"))
+        btn_close.setStyleSheet("""
+            QPushButton { background-color: #21262D; border: 1px solid #30363D; padding: 8px; border-radius: 4px; color: white; }
+            QPushButton:hover { background-color: #30363D; }
+        """)
+        btn_close.clicked.connect(self.accept)
+        layout.addWidget(btn_close)
+        
+        tree.itemDoubleClicked.connect(self._on_item_double_clicked)
+        self.topology = topology
+
+    def _on_item_double_clicked(self, item, column):
+        # If it's a group (parent item)
+        if item.childCount() > 0 or item.parent() is None:
+            group_name = item.text(0).split(" (")[0]
+            if isinstance(self.parent(), QMainWindow):
+                self.parent().focus_on_group(group_name)
+                self.accept()
+
+# ── Sync Preview Dialog ──────────────────────────────────────────────────────
+
+class SyncPreviewDialog(QDialog):
+    def __init__(self, to_clone, to_archive, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(TR("sync_preview_title"))
+        self.setMinimumWidth(700)
+        self.setMinimumHeight(550)
+        self.setStyleSheet("background-color: #0F0F0F; color: #EEEEEE; font-family: 'JetBrains Mono';")
+        
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(24, 24, 24, 24)
+        main_layout.setSpacing(20)
+        
+        # Glassmorphism header style
+        header_box = QFrame()
+        header_box.setStyleSheet("background-color: #1A1A1A; border-radius: 8px; border: 1px solid #30363D;")
+        header_layout = QVBoxLayout(header_box)
+        
+        title = QLabel(TR("sync_preview_header"))
+        title.setStyleSheet("font-size: 18px; font-weight: bold; color: #58A6FF; border: none;")
+        header_layout.addWidget(title)
+        
+        subtitle = QLabel(TR("sync_preview_subtitle", clone=len(to_clone), archive=len(to_archive)))
+        subtitle.setStyleSheet("font-size: 11px; color: #888888; border: none;")
+        header_layout.addWidget(subtitle)
+        
+        main_layout.addWidget(header_box)
+        
+        from PySide6.QtWidgets import QListWidget, QListWidgetItem
+        self.list_widget = QListWidget()
+        self.list_widget.setStyleSheet("""
+            QListWidget { background-color: transparent; border: none; }
+            QListWidget::item { background-color: #161616; border: 1px solid #30363D; border-radius: 6px; margin-bottom: 8px; padding: 10px; }
+            QListWidget::item:hover { background-color: #1C1C1C; }
+        """)
+        self.list_widget.setSpacing(8)
+        
+        # Add Clone Items
+        for path, info in to_clone:
+            self._add_card(path, TR("sync_preview_clone"), "#4CAF50", info.get("url", "External source"))
+            
+        # Add Archive Items
+        for path in to_archive:
+            self._add_card(path, TR("sync_preview_archive"), "#FF5252", TR("sync_preview_archive_path"))
+            
+        main_layout.addWidget(self.list_widget)
+        
+        # Danger zone / warning
+        if to_archive:
+            warn_box = QFrame()
+            warn_box.setStyleSheet("background-color: #211910; border-radius: 4px; padding: 8px;")
+            warn_layout = QHBoxLayout(warn_box)
+            warn_icon = QLabel()
+            warn_icon.setPixmap(get_icon("info", "#F0A033").pixmap(16, 16))
+            warn_layout.addWidget(warn_icon)
+            warn_text = QLabel(TR("sync_preview_warn"))
+            warn_text.setStyleSheet("color: #F0A033; font-size: 10px;")
+            warn_layout.addWidget(warn_text)
+            warn_layout.addStretch()
+            main_layout.addWidget(warn_box)
+            
+        # Footer
+        btn_layout = QHBoxLayout()
+        self.btn_cancel = QPushButton(TR("sync_preview_btn_dismiss"))
+        self.btn_cancel.clicked.connect(self.reject)
+        self.btn_cancel.setStyleSheet("padding: 10px; color: #888888; background: transparent; border: 1px solid #30363D;")
+        
+        self.btn_confirm = QPushButton(TR("sync_preview_btn_confirm"))
+        self.btn_confirm.clicked.connect(self.accept)
+        self.btn_confirm.setStyleSheet("""
+            QPushButton { background-color: #238636; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 6px; }
+            QPushButton:hover { background-color: #2EA043; }
+        """)
+        
+        btn_layout.addStretch()
+        btn_layout.addWidget(self.btn_cancel)
+        btn_layout.addWidget(self.btn_confirm)
+        main_layout.addLayout(btn_layout)
+
+    def _add_card(self, path, action_text, color_hex, detail_text):
+        item = QListWidgetItem(self.list_widget)
+        card = QWidget()
+        card_layout = QHBoxLayout(card)
+        card_layout.setContentsMargins(15, 10, 15, 10)
+        
+        # Icon
+        icon_lbl = QLabel()
+        icon_name = "download" if action_text == "CLONE" else "archive"
+        icon_lbl.setPixmap(get_icon(icon_name, color_hex).pixmap(24, 24))
+        card_layout.addWidget(icon_lbl)
+        
+        # Text block
+        text_layout = QVBoxLayout()
+        name_lbl = QLabel(os.path.basename(path))
+        name_lbl.setStyleSheet("font-weight: bold; font-size: 13px; color: #E2E2E2;")
+        text_layout.addWidget(name_lbl)
+        
+        detail_lbl = QLabel(detail_text)
+        detail_lbl.setStyleSheet("font-size: 10px; color: #888888;")
+        text_layout.addWidget(detail_lbl)
+        card_layout.addLayout(text_layout)
+        
+        card_layout.addStretch()
+        
+        # Badge
+        badge = QLabel(f" {action_text} ")
+        badge.setStyleSheet(f"""
+            background-color: transparent; border: 1px solid {color_hex}; 
+            color: {color_hex}; border-radius: 10px; font-size: 9px; 
+            font-weight: bold; padding: 2px 8px;
+        """)
+        card_layout.addWidget(badge)
+        
+        item.setSizeHint(card.sizeHint())
+        self.list_widget.setItemWidget(item, card)
