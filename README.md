@@ -1,8 +1,10 @@
 # GitBulk: orquestador de alto rendimiento para flujos masivos de git
 
-![versión](https://img.shields.io/badge/versión-1.4.0-blue?style=for-the-badge)
-![tecnología](https://img.shields.io/badge/motor-python_3.10-green?style=for-the-badge)
-![licencia](https://img.shields.io/badge/licencia-mit-orange?style=for-the-badge)
+<p align="center">
+  <img src="https://img.shields.io/badge/versión-1.4.0-blue?style=for-the-badge" alt="versión">
+  <img src="https://img.shields.io/badge/motor-python_3.10-green?style=for-the-badge" alt="tecnología">
+  <img src="https://img.shields.io/badge/licencia-mit-orange?style=for-the-badge" alt="licencia">
+</p>
 
 GitBulk es una herramienta integral (cli y gui) diseñada para la gestión concurrente de cientos de repositorios git de forma simultánea. optimizada para arquitecturas de microservicios y despliegues a gran escala, permite centralizar operaciones críticas sin latencia manual.
 
@@ -28,7 +30,7 @@ curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dis
 
 ---
 
-## 💎 evolución v1.4: características avanzadas
+## evolución v1.4: características avanzadas
 
 ### 1. gestión de workspaces (espacios de trabajo)
 gestione múltiples entornos raíz y sincronice estados lógicos. guarde una snapshot de su árbol de directorios y restáurela instantáneamente en cualquier máquina, automatizando clonaciones y archivado de repositorios no deseados.
@@ -41,7 +43,7 @@ organice sus proyectos mediante etiquetas lógicas (ej: `fintech`, `backend`, `f
 
 ---
 
-## 🛠 catálogo de operaciones cli
+## catálogo de operaciones cli
 
 GitBulk proporciona una suite completa de comandos para el ciclo de vida de desarrollo:
 
@@ -58,7 +60,7 @@ GitBulk proporciona una suite completa de comandos para el ciclo de vida de desa
 
 ---
 
-## 🌍 ecosistema y arquitectura
+## ecosistema y arquitectura
 
 - **motor nativo**: migración completa a procesos `subprocess` para máxima velocidad y mínima dependencia.
 - **gui de alta fidelidad**: interfaz dinámica multi-lenguaje (es, us, uk, de, fr) con soporte para modo oscuro nativo.
@@ -67,7 +69,7 @@ GitBulk proporciona una suite completa de comandos para el ciclo de vida de desa
 
 ---
 
-## 📖 documentación completa
+## documentación completa
 
 para una inmersión profunda en la arquitectura y escenarios de uso avanzado, consulta los manuales técnicos:
 
