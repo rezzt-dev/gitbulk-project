@@ -1,7 +1,6 @@
 # archivos de compilación de PyInstaller
 build/
-dist/
-*.spec
+.exe
 
 # entornos virtuales de Python
 venv/
@@ -15,3 +14,4 @@ __pycache__/
 
 # cache de pruebas (Pytest)
 .pytest_cache/
+*.exe
