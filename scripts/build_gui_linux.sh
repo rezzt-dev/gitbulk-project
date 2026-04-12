@@ -16,12 +16,13 @@ if ! command -v pyinstaller &> /dev/null; then
 fi
 
 echo -e "\e[1;34m[INFO] Cleaning previous builds...\e[0m"
-rm -rf build/ dist/GitBulk-GUI-Linux
+rm -rf build/ dist/linux/GitBulk-GUI
 
 echo -e "\e[1;34m[INFO] Running PyInstaller...\e[0m"
 
 pyinstaller --noconfirm --onefile --windowed \
-    --name "GitBulk-GUI-Linux" \
+    --name "GitBulk-GUI" \
+    --distpath "dist/linux" \
     --paths "src" \
     --add-data "assets:assets" \
     --add-data "src/gui:src/gui" \
@@ -34,4 +35,4 @@ pyinstaller --noconfirm --onefile --windowed \
     --hidden-import "gui.icon_manager" \
     "src/main.py"
 
-echo -e "\e[1;32m[SUCCESS] Build complete! Binary available at: dist/GitBulk-GUI-Linux\e[0m"
+echo -e "\e[1;32m[SUCCESS] Build complete! Binary available at: dist/linux/GitBulk-GUI\e[0m"

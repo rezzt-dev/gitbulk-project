@@ -29,9 +29,11 @@ except ImportError:
 try:
     from .icon_manager import get_icon
     from .workers import ScannerWorker, OperationWorker
+    from model import calculate_optimal_workers
 except ImportError:
     from gui.icon_manager import get_icon
     from gui.workers import ScannerWorker, OperationWorker
+    from model import calculate_optimal_workers
 
 
 def _safe_get_metadata(repo_path):
@@ -416,6 +418,14 @@ class MainWindow(QMainWindow):
         self.operation_worker = None
         self._op_start_time = None
         self._processed_count = 0
+        
+        # ── UI Performance Throttling
+        self._log_queue = []
+        self._ui_timer = QTimer(self)
+        self._ui_timer.setInterval(250) # Flush every 250ms
+        self._ui_timer.timeout.connect(self._process_log_queue)
+        self._found_repo_nodes = {} # Cache for UI updates
+
         self._pending_import_layout = None  # set by import_workspace(), consumed by on_scan_finished()
 
         # Master container
@@ -446,6 +456,13 @@ class MainWindow(QMainWindow):
 
         # ── Status Bar
         self._build_status_bar(root_layout)
+
+        # ── Initial diagnostic (SSH, etc)
+        ssh_ok, ssh_info = ensure_ssh_agent()
+        if not ssh_ok:
+            self.append_log(f"[!] SSH: {ssh_info}", "#F0A033")
+        elif "started" in ssh_info:
+            self.append_log(f"[INFO] SSH: {ssh_info}", "#888888")
 
     # ── Sidebar ───────────────────────────────────────────────────────────────
 
@@ -499,6 +516,20 @@ class MainWindow(QMainWindow):
             btn.clicked.connect(lambda checked=False, o=op: self.start_operation(o))
             setattr(self, attr, btn)
             layout.addWidget(btn)
+
+        layout.addSpacing(8)
+        layout.addWidget(self._divider())
+
+        # ── WORKSPACES section
+        layout.addWidget(self._section_header("sidebar_workspaces"))
+        
+        self.workspace_list_layout = QVBoxLayout()
+        self.workspace_list_layout.setSpacing(2)
+        layout.addLayout(self.workspace_list_layout)
+        
+        self.btn_refresh_workspaces = self._sidebar_btn("  Refresh Workspaces", "sync", "#555555")
+        self.btn_refresh_workspaces.clicked.connect(self.refresh_workspaces_ui)
+        layout.addWidget(self.btn_refresh_workspaces)
 
         layout.addSpacing(8)
         layout.addWidget(self._divider())
@@ -580,6 +611,68 @@ class MainWindow(QMainWindow):
         save_config(config)
         
         self.retranslate_ui()
+        self.refresh_workspaces_ui()
+
+    def refresh_workspaces_ui(self):
+        """Clears and repopulates the workspace list in the sidebar."""
+        # Clear existing
+        while self.workspace_list_layout.count():
+            item = self.workspace_list_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+        
+        config = load_config()
+        workspaces = config.get("workspaces", {})
+        
+        if not workspaces:
+            lbl = QLabel(f"  {TR('status_no_workspaces') if 'status_no_workspaces' in TR.data else 'No saved workspaces'}")
+            lbl.setStyleSheet("color: #444444; font-family: 'JetBrains Mono'; font-size: 10px; padding: 4px 16px;")
+            self.workspace_list_layout.addWidget(lbl)
+        else:
+            for name in workspaces:
+                btn = QPushButton(f"  {name}")
+                btn.setIcon(get_icon("repo", "#666666"))
+                btn.setStyleSheet("""
+                    QPushButton { 
+                        font-family: 'JetBrains Mono'; text-align: left; padding: 6px 16px; 
+                        color: #BBBBBB; border: none; font-size: 11px;
+                    }
+                    QPushButton:hover { background-color: #1A1A1A; color: #EEEEEE; }
+                """)
+                # Use default argument to capture the name in the lambda
+                btn.clicked.connect(lambda checked=False, n=name: self.load_named_workspace(n))
+                self.workspace_list_layout.addWidget(btn)
+
+    def load_named_workspace(self, name):
+        """Loads a workspace by name from the global config."""
+        config = load_config()
+        workspaces = config.get("workspaces", {})
+        if name not in workspaces:
+            return
+            
+        snapshot = workspaces[name]
+        # In GUI, we typically want to ask which directory to use if we are not in one
+        # or just use the current target_dir if available.
+        # However, for workspaces, they often define their own root.
+        
+        # For now, let's just use the logic from 'import_workspace'
+        self.append_log(f"Loading workspace: {name}", "#3FB950")
+        
+        # We need to simulate the 'import' behavior
+        # But wait, import_workspace asks for a file.
+        # We'll just pass the snapshot data directly to the pending layout logic.
+        
+        # We need a root directory. If the snapshot was saved with a root, where is it?
+        # My 'save' logic in main.py saved a dict of repos with relative paths.
+        
+        # Actually, let's keep it simple: load into current target_dir
+        if not self.target_dir:
+            self.prompt_directory_selection()
+            if not self.target_dir: return
+
+        self._pending_import_layout = snapshot
+        # The scanner will pick it up after scan finishes
+        self.load_directory(self.target_dir)
 
     def retranslate_ui(self):
         """Refreshes all UI strings without restarting."""
@@ -832,6 +925,13 @@ class MainWindow(QMainWindow):
             self.lbl_status_dot.hide()
         self.lbl_status_time.setText(time_str)
 
+    def append_log(self, text, color="#484848"):
+        """
+        Updates the status bar detail text with a specific color.
+        Provides a safe way to log information in the GUI.
+        """
+        self._set_status(self.lbl_status_op.text().strip(), detail=text, color=color)
+
     # ── Directory and Scanning ────────────────────────────────────────────────
 
     def prompt_directory_selection(self):
@@ -929,6 +1029,7 @@ class MainWindow(QMainWindow):
 
         self.repo_model.removeRows(0, self.repo_model.rowCount())
         root = self.repo_model.invisibleRootItem()
+        self._found_repo_nodes = {} # Reset cache
 
         def build_recursive(data_list, parent_item):
             # data_list is already sorted (groups first) by _sort_workspace_data
@@ -1047,16 +1148,6 @@ class MainWindow(QMainWindow):
         container = self._get_data_container(node_path[:-1])
         return container, node_path[-1]
 
-    def _get_mapped_paths(self, data):
-        """Recursively collects all repository paths already in the data model."""
-        paths = set()
-        for n in data:
-            if n.get("is_group"):
-                paths.update(self._get_mapped_paths(n.get("children", [])))
-            else:
-                paths.add(n.get("path"))
-        return paths
-
     def _create_repo_row(self, parent_item, repo_path):
         repo_name = os.path.basename(repo_path)
 
@@ -1080,11 +1171,14 @@ class MainWindow(QMainWindow):
         item_output.setFlags(item_output.flags() & ~Qt.ItemIsEditable)
 
         parent_item.appendRow([item_repo, item_branch, item_status, item_output])
+        
+        # Cache row items for fast lookup
+        row = parent_item.rowCount() - 1
+        self._found_repo_nodes[repo_path] = [parent_item.child(row, col) for col in range(4)]
 
         # Async metadata update (branch name)
         meta = _safe_get_metadata(repo_path)
         if meta and meta.get("branch"):
-            row = parent_item.rowCount() - 1
             bi = parent_item.child(row, 1)
             if bi:
                 bi.setText(meta["branch"])
@@ -1298,6 +1392,9 @@ class MainWindow(QMainWindow):
 
         self._op_start_time = time.time()
         self._processed_count = 0
+        self._log_queue.clear()
+        self._ui_timer.start()
+
         total = len(self.found_repos)
 
         # Progress bar
@@ -1328,66 +1425,80 @@ class MainWindow(QMainWindow):
             "#E2E2E2"
         )
 
+        # Dynamic worker calculation (GUI currently defaults to auto-tuning)
+        optimal = calculate_optimal_workers(self.target_dir, 0)
+        
         self.operation_worker = OperationWorker(
-            self.found_repos, operation, max_workers=10, kwargs=kwargs
+            self.found_repos, operation, max_workers=optimal, kwargs=kwargs
         )
+        
+        # Log the auto-tuned worker count
+        self.append_log(f"[INFO] Auto-tuning: using {optimal} concurrent threads.", "#888888")
         self.operation_worker.log_ready.connect(self.on_log_ready)
         self.operation_worker.finished.connect(self.on_operation_finished)
         self.operation_worker.start()
         self._set_buttons_enabled(False)
 
     def on_log_ready(self, status, detail, repo_path, output):
-        self._processed_count += 1
-        total = len(self.found_repos)
+        # Buffer the log result instead of immediate UI reflow
+        self._log_queue.append((status, detail, repo_path, output))
 
-        # Advance progress bar
-        self.progress_bar.setValue(self._processed_count)
-        self.lbl_status_detail.setText(f"{self._processed_count} / {total}")
-
-        leaf = self._find_repo_node(repo_path)
-        if not leaf:
+    def _process_log_queue(self):
+        """Flushes the log queue and updates the UI in a single batch."""
+        if not self._log_queue:
             return
-
-        row = leaf.row()
-        parent = leaf.parent() or self.repo_model.invisibleRootItem()
-
-        # Color mapping
+            
+        batch = self._log_queue[:]
+        self._log_queue.clear()
+        
+        # Color mapping (Pre-calculating to avoid re-lookup)
         color_map = {
-            "OK": "#3FB950",
-            "CLEAN": "#3FB950",
-            "MODIFIED": "#F0A033",
-            "CLEANED": "#3FB950",
-            "AHEAD": "#3FB950",           # Green: You are ahead, ready to push
-            "BEHIND": "#BC8CFF",          # Purple: Remote has changes
-            "DIVERGENT": "#BC8CFF",       # Purple: Both ahead and behind
-            "CONFLICT": "#F85149",
-            "ERROR": "#F85149",
-            "FETCH_UPDATE": "#BC8CFF",
-            "CHECKOUT": "#3FB950",
-            "IGNORED": "#555555",
-            "SUCCESS": "#3FB950",
-            "FAILED": "#F85149",
+            "OK": "#3FB950", "CLEAN": "#3FB950", "MODIFIED": "#F0A033",
+            "CLEANED": "#3FB950", "AHEAD": "#3FB950", "BEHIND": "#BC8CFF",
+            "DIVERGENT": "#BC8CFF", "CONFLICT": "#F85149", "ERROR": "#F85149",
+            "FETCH_UPDATE": "#BC8CFF", "CHECKOUT": "#3FB950", "IGNORED": "#555555",
+            "SUCCESS": "#3FB950", "FAILED": "#F85149",
         }
-        color = color_map.get(status.upper(), "#666666")
 
-        s_item = parent.child(row, 2)
-        d_item = parent.child(row, 3)
+        total = len(self.found_repos)
+        
+        for status, detail, repo_path, output in batch:
+            row_items = self._found_repo_nodes.get(repo_path)
+            if not row_items:
+                # If cache missed (unlikely but safe fallback)
+                leaf = self._find_repo_node(repo_path)
+                if not leaf: continue
+                parent = leaf.parent() or self.repo_model.invisibleRootItem()
+                row = leaf.row()
+                row_items = [parent.child(row, col) for col in range(4)]
+                self._found_repo_nodes[repo_path] = row_items
 
-        if s_item:
+            color = color_map.get(status.upper(), "#666666")
+            
+            # Status Column
+            s_item = row_items[2]
             s_item.setText(status)
             s_item.setForeground(QColor(color))
-
-        if d_item:
+            
+            # Detail Column
+            d_item = row_items[3]
             display = detail if detail else (output.strip().split("\n")[0] if output else "")
             d_item.setText(display or "—")
             d_item.setForeground(QColor(color if display else "#444444"))
             if output:
                 d_item.setToolTip(output.strip())
+            
+            self._processed_count += 1
+
+        # Periodic status updates
+        self.progress_bar.setValue(self._processed_count)
+        self.lbl_status_detail.setText(f"{self._processed_count} / {total}")
 
     def on_operation_finished(self, count):
+        self._ui_timer.stop()
+        self._process_log_queue() # Final flush
+        
         elapsed = time.time() - self._op_start_time if self._op_start_time else 0
-
-        # Complete the bar then fade it out after 2s
         self.progress_bar.setValue(self.progress_bar.maximum())
         QTimer.singleShot(2000, self.progress_bar.hide)
 

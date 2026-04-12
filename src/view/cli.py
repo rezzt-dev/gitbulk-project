@@ -47,8 +47,20 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
 
   parser.add_argument(
     "operation",
-    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch", "clean", "checkout", "ci-status"],
+    choices = ["fetch", "pull", "auth", "status", "export", "restore", "current-branch", "clean", "checkout", "ci-status", "workspace"],
     help = "The primary Git operation to iterate across the active workspace."
+  )
+
+  parser.add_argument(
+    "--action",
+    choices = ["save", "load", "list", "delete"],
+    help = "The specific action for the 'workspace' operation."
+  )
+
+  parser.add_argument(
+    "-n", "--name",
+    type = str,
+    help = "The name of the workspace to save, load, or delete."
   )
 
   parser.add_argument(
@@ -60,8 +72,8 @@ def parse_arguments(default_dir: str) -> argparse.Namespace:
   parser.add_argument(
     "-w", "--workers",
     type = int,
-    default = 5,
-    help = "number of concurrent threads for increased speed (default: 5)."
+    default = 0,
+    help = "number of concurrent threads. Set to 0 for automatic hardware-based tuning (default: 0)."
   )
 
   parser.add_argument(

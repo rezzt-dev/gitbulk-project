@@ -10,7 +10,8 @@ CONFIG_FILE = Path.home() / ".git_manager_pro.json"
 
  # configuramos por defecto si es la primera vez que se abre el programa.
 DEFAULT_CONFIG = {
-  "last_directory": ""
+  "last_directory": "",
+  "workspaces": {}
 }
 
 def load_config() -> Dict[str, Any]:

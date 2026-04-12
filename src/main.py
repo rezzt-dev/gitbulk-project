@@ -3,14 +3,12 @@ import sys
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# Workaround for PyInstaller to explicitly pack dependencies (without try/except)
+# Workaround for PyInstaller to explicitly pack dependencies
 def _pyinstaller_hooks():
     import rich
     import rich.console
     import rich.progress
     import rich.theme
-    import git
-    import git.exc
     import persistence
     import view
     import model
@@ -35,7 +33,7 @@ from view import (
     show_branches_compact,
     show_ci_compact
 )
-from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches, get_github_token, get_ci_status
+from model import find_git_repos, run_git_operation, setup_global_git_credentials, get_repo_metadata, clone_repo, get_all_branches, get_github_token, get_ci_status, calculate_optimal_workers, ensure_ssh_agent, test_ssh_connectivity
 
 def main():
   # Auto-launch GUI if frozen (PyInstaller) and no arguments
@@ -84,12 +82,26 @@ def main():
   save_config(config)
 
   MAX_WORKERS = 50
-  if getattr(args, 'workers', 5) <= 0:
-      console.print("\n[bold red]Error: The number of concurrent threads (-w) must be greater than 0.[/bold red]")
+  requested_workers = getattr(args, 'workers', 0)
+  if requested_workers < 0:
+      console.print("\n[bold red]Error: The number of concurrent threads (-w) must be 0 or greater.[/bold red]")
       sys.exit(1)
-  if getattr(args, 'workers', 5) > MAX_WORKERS:
-      console.print(f"\n[bold red]Error: The number of concurrent threads (-w) cannot exceed {MAX_WORKERS}. Received: {args.workers}.[/bold red]")
+  if requested_workers > MAX_WORKERS:
+      console.print(f"\n[bold red]Error: The number of concurrent threads (-w) cannot exceed {MAX_WORKERS}. Received: {requested_workers}.[/bold red]")
       sys.exit(1)
+
+  # Calculate optimal workers based on hardware profiling if requested_workers is 0
+  optimal_workers = calculate_optimal_workers(target_dir, requested_workers)
+  
+  if requested_workers == 0:
+      console.print(f"[dim][INFO] Auto-tuning: detected optimal concurrency for this hardware: [bold yellow]{optimal_workers}[/bold yellow] threads.[/dim]")
+
+  # SSH Agent Auto-start
+  ssh_success, ssh_msg = ensure_ssh_agent()
+  if not ssh_success:
+      console.print(f"\n[bold yellow][!] SSH Agent Advisory:[/bold yellow]\n[dim]{ssh_msg}[/dim]\n")
+  elif "started" in ssh_msg:
+      console.print(f"[dim][INFO] {ssh_msg}[/dim]")
 
   if args.operation == "checkout" and not getattr(args, 'branch', None):
       console.print("\n[bold red]Error: The 'checkout' operation requires a target branch via the -b / --branch flag.[/bold red]")
@@ -116,6 +128,129 @@ def main():
   try:
     show_welcome(target_dir, args.operation)
 
+    if args.operation == "workspace":
+        if not getattr(args, "action", None):
+            console.print("\n[bold red]Error: The 'workspace' operation requires an --action (save, load, list, delete).[/bold red]")
+            sys.exit(1)
+
+        workspaces = config.get("workspaces", {})
+
+        if args.action == "list":
+            if not workspaces:
+                console.print("\n[dim]No workspaces saved yet.[/dim]")
+            else:
+                console.print("\n[bold magenta]Saved Workspaces:[/bold magenta]")
+                for name in workspaces:
+                    count = len(workspaces[name])
+                    console.print(f"  • [cyan]{name}[/cyan] ({count} repos)")
+            sys.exit(0)
+
+        if args.action == "save":
+            if not args.name:
+                console.print("\n[bold red]Error: 'save' action requires a --name.[/bold red]")
+                sys.exit(1)
+            
+            repos = find_git_repos(target_dir)
+            if not repos:
+                show_no_repos_found(target_dir)
+                sys.exit(0)
+
+            show_start_processing(len(repos), "Saving Workspace")
+            snapshot = []
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                TimeElapsedColumn(),
+                console=console,
+                transient=False
+            ) as progress:
+                task = progress.add_task(f"[bold cyan]Analizando repos...", total=len(repos))
+                with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
+                    future_to_repo = {
+                        executor.submit(get_repo_metadata, repo): repo for repo in repos
+                    }
+                    for future in as_completed(future_to_repo):
+                        repo_path = future_to_repo[future]
+                        metadata = future.result()
+                        rel_path = os.path.relpath(repo_path, target_dir)
+                        
+                        snapshot.append({
+                            "path": rel_path,
+                            "url": metadata["url"],
+                            "branch": metadata["branch"]
+                        })
+                        progress.advance(task, 1)
+            
+            workspaces[args.name] = snapshot
+            config["workspaces"] = workspaces
+            save_config(config)
+            console.print(f"\n[bold green]Workspace '{args.name}' saved successfully![/bold green] ({len(snapshot)} repositories)")
+            sys.exit(0)
+
+        if args.action == "delete":
+            if not args.name:
+                console.print("\n[bold red]Error: 'delete' action requires a --name.[/bold red]")
+                sys.exit(1)
+            if args.name in workspaces:
+                del workspaces[args.name]
+                config["workspaces"] = workspaces
+                save_config(config)
+                console.print(f"\n[bold green]Workspace '{args.name}' deleted.[/bold green]")
+            else:
+                console.print(f"\n[bold red]Workspace '{args.name}' not found.[/bold red]")
+            sys.exit(0)
+
+        if args.action == "load":
+            if not args.name:
+                console.print("\n[bold red]Error: 'load' action requires a --name.[/bold red]")
+                sys.exit(1)
+            if args.name not in workspaces:
+                console.print(f"\n[bold red]Workspace '{args.name}' not found.[/bold red]")
+                sys.exit(1)
+            
+            snapshot = workspaces[args.name]
+            console.print(f"\n[bold cyan]Loading Workspace:[/bold cyan] {args.name} ({len(snapshot)} repos)\n")
+            
+            repos_to_clone = []
+            for repo in snapshot:
+                repo_abs_path = os.path.normpath(os.path.join(target_dir, repo["path"]))
+                if not os.path.exists(os.path.join(repo_abs_path, ".git")):
+                    repos_to_clone.append((repo_abs_path, repo))
+                    
+            if not repos_to_clone:
+                console.print(f"\n[bold green]All repositories are in sync. No missing repositories found.[/bold green]")
+                sys.exit(0)
+
+            show_start_processing(len(repos_to_clone), "loading")
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                TimeElapsedColumn(),
+                console=console,
+                transient=False
+            ) as progress:
+              task = progress.add_task(f"[bold cyan]Restoring {args.name}...", total=len(repos_to_clone))
+              with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
+                future_to_repo = {
+                   executor.submit(clone_repo, path, info): path
+                   for path, info in repos_to_clone
+                }
+                counts = {'OK': 0, 'CLEAN': 0, 'ERROR': 0}
+                for future in as_completed(future_to_repo):
+                    status, detail, repo_path, output = future.result()
+                    counts[status] = counts.get(status, 0) + 1
+                    show_result(status, detail, repo_path, output)
+                    progress.advance(task, 1)
+
+            show_summary(counts)
+            sys.exit(0)
+
     if args.operation == "export":
         repos = find_git_repos(target_dir)
         if not repos:
@@ -137,7 +272,7 @@ def main():
             transient=False
         ) as progress:
            task = progress.add_task(f"[bold cyan]Analizando repos...", total=len(repos))
-           with ThreadPoolExecutor(max_workers=args.workers) as executor:
+           with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
                future_to_repo = {
                    executor.submit(get_repo_metadata, repo): repo for repo in repos
                }
@@ -221,7 +356,7 @@ def main():
             transient=False
         ) as progress:
           task = progress.add_task(f"[bold cyan]Ejecutando {args.operation.upper()}...", total=len(repos_to_clone))
-          with ThreadPoolExecutor(max_workers=args.workers) as executor:
+          with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
             future_to_repo = {
                executor.submit(clone_repo, path, info): path
                for path, info in repos_to_clone
@@ -254,7 +389,7 @@ def main():
             transient=False
         ) as progress:
            task = progress.add_task(f"[bold cyan]Analizando ramas...", total=len(repos))
-           with ThreadPoolExecutor(max_workers=args.workers) as executor:
+           with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
                future_to_repo = {
                    executor.submit(get_all_branches, repo): repo for repo in repos
                }
@@ -297,7 +432,7 @@ def main():
             transient=False
         ) as progress:
            task = progress.add_task(f"[bold cyan]Analizando pipelines...", total=len(repos))
-           with ThreadPoolExecutor(max_workers=args.workers) as executor:
+           with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
                future_to_repo = {
                    executor.submit(get_ci_status, repo, token): repo for repo in repos
                }
@@ -336,7 +471,7 @@ def main():
         transient=False
     ) as progress:
       task = progress.add_task(f"[bold cyan]Ejecutando {args.operation.upper()}...", total=len(repos))
-      with ThreadPoolExecutor(max_workers=args.workers) as executor:
+      with ThreadPoolExecutor(max_workers=optimal_workers) as executor:
         future_to_repo = {
           executor.submit(
               run_git_operation,

@@ -5,7 +5,12 @@ a = Analysis(
     ['D:\\repositorios\\desktop-projects\\gitbulk-project\\scripts\\..\\src\\main.py'],
     pathex=['D:\\repositorios\\desktop-projects\\gitbulk-project\\scripts\\..\\src'],
     binaries=[],
-    datas=[('D:\\repositorios\\desktop-projects\\gitbulk-project\\scripts\\..\\assets', 'assets'), ('D:\\repositorios\\desktop-projects\\gitbulk-project\\scripts\\..\\src\\gui\\icons', 'gui/icons'), ('D:\\repositorios\\desktop-projects\\gitbulk-project\\scripts\\..\\src\\gui\\theme.qss', 'gui')],
+    datas=[
+        ('D:\\repositorios\\desktop-projects\\gitbulk-project\\assets', 'assets'), 
+        ('D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\gui\\icons', 'gui/icons'), 
+        ('D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\gui\\theme.qss', 'gui'),
+        ('D:\\repositorios\\desktop-projects\\gitbulk-project\\vendor\\git', 'vendor/git')
+    ],
     hiddenimports=['gui.translations', 'gui.icon_manager', 'PySide6.QtSvg', 'PySide6.QtSvgWidgets', 'PySide6.QtXml'],
     hookspath=[],
     hooksconfig={},

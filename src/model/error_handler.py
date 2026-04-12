@@ -6,15 +6,13 @@ clean, user-friendly English messages for display in the terminal.
 """
 
 import re
-from git import exc
-
-def parse_git_error(e: exc.GitCommandError) -> str:
+def parse_git_error(error_msg: str) -> str:
     """
-    Parses and cleans raw errors returned by GitPython,
+    Parses and cleans raw errors returned by Git commands,
     translating the most common failures into readable messages.
     Unknown errors are truncated to avoid cluttering the terminal.
     """
-    error_msg = e.stderr.strip() if e.stderr else str(e)
+    error_msg = error_msg.strip()
     if not error_msg:
         return "Unknown Git error."
 
@@ -29,6 +27,9 @@ def parse_git_error(e: exc.GitCommandError) -> str:
         return "HTTP 404: Repository not found at the remote origin."
 
     # 2. Authentication errors
+    if "Permission denied (publickey)" in error_msg:
+        return "SSH Auth Error: Permission denied. Ensure your private key is added to the ssh-agent (ssh-add)."
+        
     if "Permission denied" in error_msg or "Authentication failed" in error_msg or "could not read Username" in error_msg:
         return "Authentication error: Invalid or missing SSH/HTTPS credentials."
 

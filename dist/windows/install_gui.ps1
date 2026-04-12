@@ -6,7 +6,7 @@
 $AppName = "GitBulk"
 $AppFullName = "GitBulk GUI"
 $Version = "v1.3.0"
-$ExeName = "GitBulk-GUI-Windows.exe"
+$ExeName = "GitBulk-GUI.exe"
 $InstallFolder = "$env:ProgramFiles\$AppName"
 $ReleaseUrl = "https://github.com/rezzt-dev/gitbulk-project/releases/download/$Version/$ExeName"
 
@@ -21,7 +21,7 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
     } else {
         # IEX mode: We must download to a temp file to allow Start-Process -File
         $ScriptPath = Join-Path $env:TEMP "GitBulk_GUI_Installer.ps1"
-        $RemoteUrl = "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1"
+        $RemoteUrl = "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/windows/install_gui.ps1"
         Invoke-WebRequest -Uri $RemoteUrl -OutFile $ScriptPath -ErrorAction SilentlyContinue
     }
 
@@ -42,7 +42,7 @@ try {
     # 2. Detección de Archivos Locales vs Web
     $SourceExe = ""
     # Intentamos detectar si estamos en el repo local (relativo a este script)
-    $LocalSource = Join-Path $PSScriptRoot "..\App_GUI\$ExeName"
+    $LocalSource = Join-Path $PSScriptRoot "$ExeName"
     
     if (Test-Path "$LocalSource") {
         Write-Host "[INFO] Detectada instalación desde archivos locales: $LocalSource" -ForegroundColor Gray

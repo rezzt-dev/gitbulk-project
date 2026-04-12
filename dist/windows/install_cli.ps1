@@ -6,7 +6,7 @@
 $AppName = "GitBulk-CLI"
 $ExecutableBaseName = "gitbulk"
 $Version = "v1.3.0"
-$ExeName = "GitBulk-CLI-Windows.exe"
+$ExeName = "gitbulk-cli.exe"
 $InstallFolder = "$env:USERPROFILE\.gitbulk"
 $ReleaseUrl = "https://github.com/rezzt-dev/gitbulk-project/releases/download/$Version/$ExeName"
 
@@ -20,7 +20,7 @@ if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Adm
         $ScriptPath = $PSCommandPath
     } else {
         $ScriptPath = Join-Path $env:TEMP "GitBulk_CLI_Installer.ps1"
-        $RemoteUrl = "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1"
+        $RemoteUrl = "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/windows/install_cli.ps1"
         Invoke-WebRequest -Uri $RemoteUrl -OutFile $ScriptPath -ErrorAction SilentlyContinue
     }
 

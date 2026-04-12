@@ -11,7 +11,7 @@ echo -e "${GREEN}   GitBulk Linux Native Installer    ${NC}"
 echo -e "${GREEN}=====================================${NC}"
 
 VERSION="v1.3.0"
-BINARY_NAME="GitBulk-GUI-Linux"
+BINARY_NAME="GitBulk-GUI"
 INSTALL_DIR="$HOME/.local/bin"
 ICON_DIR="$HOME/.local/share/icons"
 APP_DIR="$HOME/.local/share/applications"

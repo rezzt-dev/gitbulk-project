@@ -55,6 +55,9 @@ LANGUAGES = {
         "sidebar_advanced": "AVANZADO",
         "btn_collapse": "Contraer Todo",
         "btn_expand": "Expandir Todo",
+        "sidebar_workspaces": "ESPACIOS DE TRABAJO",
+        "btn_refresh_workspaces": "Refrescar Listado",
+        "status_no_workspaces": "No hay espacios guardados",
         "footer_version": "GitBulk  v1.3.0",
         "btn_language": "Idioma"
     },
@@ -109,6 +112,9 @@ LANGUAGES = {
         "sidebar_advanced": "ADVANCED",
         "btn_collapse": "Collapse All",
         "btn_expand": "Expand All",
+        "sidebar_workspaces": "WORKSPACES",
+        "btn_refresh_workspaces": "Refresh List",
+        "status_no_workspaces": "No saved workspaces",
         "footer_version": "GitBulk  v1.3.0",
         "btn_language": "Language"
     },
@@ -163,6 +169,9 @@ LANGUAGES = {
         "sidebar_advanced": "ADVANCED",
         "btn_collapse": "Collapse All",
         "btn_expand": "Expand All",
+        "sidebar_workspaces": "WORKSPACES",
+        "btn_refresh_workspaces": "Refresh List",
+        "status_no_workspaces": "No saved workspaces",
         "footer_version": "GitBulk  v1.3.0",
         "btn_language": "Language"
     },
@@ -217,6 +226,9 @@ LANGUAGES = {
         "sidebar_advanced": "ERWEITERT",
         "btn_collapse": "Alles einklappen",
         "btn_expand": "Alles ausklappen",
+        "sidebar_workspaces": "WORKSPACES",
+        "btn_refresh_workspaces": "Liste aktualisieren",
+        "status_no_workspaces": "Keine gespeicherten Workspaces",
         "footer_version": "GitBulk  v1.3.0",
         "btn_language": "Sprache"
     },
@@ -271,6 +283,9 @@ LANGUAGES = {
         "sidebar_advanced": "AVANCÉ",
         "btn_collapse": "Tout réduire",
         "btn_expand": "Tout développer",
+        "sidebar_workspaces": "ESPACES DE TRAVAIL",
+        "btn_refresh_workspaces": "Actualiser la liste",
+        "status_no_workspaces": "Aucun espace sauvegardé",
         "footer_version": "GitBulk  v1.3.0",
         "btn_language": "Langue"
     }
