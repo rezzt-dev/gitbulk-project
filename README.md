@@ -1,117 +1,80 @@
-# GitBulk Project
+# GitBulk: orquestador de alto rendimiento para flujos masivos de git
 
-Una herramienta profesional de línea de comandos (CLI) e interfaz gráfica (GUI) nativa escrita en Python para gestionar y actualizar múltiples repositorios Git de forma masiva y concurrente.
+![versión](https://img.shields.io/badge/versión-1.4.0-blue?style=for-the-badge)
+![tecnología](https://img.shields.io/badge/motor-python_3.10-green?style=for-the-badge)
+![licencia](https://img.shields.io/badge/licencia-mit-orange?style=for-the-badge)
 
-> **Documentación del Proyecto:** Consulta guías de instalación, arquitecturas y uso avanzado en el manual oficial: [Español (ES)](project-doc/es-project-doc.md) | [English (EN)](project-doc/en-project-doc.md).
+GitBulk es una herramienta integral (cli y gui) diseñada para la gestión concurrente de cientos de repositorios git de forma simultánea. optimizada para arquitecturas de microservicios y despliegues a gran escala, permite centralizar operaciones críticas sin latencia manual.
 
-En lugar de procesar directorios de forma secuencial, **GitBulk** localiza recursivamente todos los repositorios en una ruta específica y ejecuta operaciones de forma concurrente en paralelo (ej. `fetch`, `pull`, `checkout`), reduciendo drásticamente los tiempos de ejecución en entornos con gran volumen de proyectos.
+> [!NOTE]
+> **identidad de marca**: el proyecto sigue una línea estética senior con cumplimiento estricto de minúsculas en todas sus interfaces y documentación técnica, una marca personal de desarrollo de **rezzt-dev**.
 
 ---
 
-## Instalación del Proyecto
+## 🚀 instalación rápida (producción)
 
-GitBulk puede instalarse directamente desde la terminal utilizando los siguientes comandos oficiales:
+puedes desplegar el entorno completo con un solo comando en tu terminal:
 
-### GitBulk Desktop (GUI + CLI) - Recomendado
-
-Versión completa con interfaz gráfica, accesos directos e integración total en el sistema operativo.
-
-**Windows (PowerShell):**
+### GitBulk desktop (gui + cli)
+**windows (powershell):**
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/windows/install_gui.ps1" | iex
+iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1" | iex
 ```
 
-**Linux (Bash):**
+**linux (bash):**
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/linux/install_gui.sh" | bash
-```
-
-### GitBulk CLI (Terminal Only)
-
-Distribución ligera optimizada exclusivamente para entornos de terminal.
-
-**Windows (PowerShell):**
-```powershell
-iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/windows/install_cli.ps1" | iex
-```
-
-**Linux / macOS (Bash):**
-```bash
-curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/linux/install_cli.sh" | bash
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install_linux.sh" | bash
 ```
 
 ---
 
-## Características Principales
+## 💎 evolución v1.4: características avanzadas
 
-- **Interfaz Gráfica Nativa:** Aplicación de escritorio con diseño moderno, soporte para modo oscuro y retroalimentación visual en tiempo real.
-- **Ejecución Concurrente:** Utiliza un motor de hilos optimizado (`ThreadPoolExecutor`) para procesar múltiples repositorios simultáneamente.
-- **Persistencia de Sesión:** Sistema de gestión de configuración que preserva el estado del espacio de trabajo y las preferencias del usuario.
-- **Interfaz Visual Técnica:** Salida por consola formateada mediante la librería `rich`, proporcionando informes de estado precisos y códigos de color normalizados.
-- **Arquitectura Modular:** Basado en patrones de diseño que separan la lógica de negocio (Model) de la interacción con el usuario (View) y la persistencia de datos.
+### 1. gestión de workspaces (espacios de trabajo)
+gestione múltiples entornos raíz y sincronice estados lógicos. guarde una snapshot de su árbol de directorios y restáurela instantáneamente en cualquier máquina, automatizando clonaciones y archivado de repositorios no deseados.
 
----
+### 2. motor de concurrencia optimizado
+olvídese de configurar hilos manualmente. el motor de GitBulk incluye **auto-tuning** basado en hardware (`-w 0`). la herramienta perfila su cpu e io para asignar el paralelismo óptimo sin saturar el sistema.
 
-## Requisitos de Sistema
-
-- **Git:** Debe estar instalado y accesible globalmente a través de la variable de entorno PATH.
-- **Windows (GUI/Desktop):** Distribución autónoma "One-File" (no requiere instalación previa de Python).
-- **Linux/macOS:** Requiere **Python 3.7+** para la ejecución de la versión CLI.
+### 3. group inspector & logical topology
+organice sus proyectos mediante etiquetas lógicas (ej: `fintech`, `backend`, `frontend`). filtre cualquier operación masiva para que afecte solo a un grupo específico de la topología.
 
 ---
 
-## Guía de Uso (CLI)
+## 🛠 catálogo de operaciones cli
 
-Ejecute la herramienta desde la terminal especificando la operación y los parámetros requeridos.
+GitBulk proporciona una suite completa de comandos para el ciclo de vida de desarrollo:
 
-### Operaciones Disponibles
-
-| Operación | Descripción |
+| comando | descripción técnica |
 | :--- | :--- |
-| `fetch` | Descarga metadatos del historial remoto sin integrar cambios locales. |
-| `pull` | Actualiza la rama activa aplicando una estrategia de integración `fast-forward only`. |
-| `status` | Analiza el estado del árbol de trabajo (archivos modificados, divergencia de commits). |
-| `current-branch` | Genera una topología compacta de las ramas locales frente a las referencias remotas. |
-| `checkout` | Realiza una transición masiva de HEAD hacia una rama objetivo (`-b branch`). |
-| `clean` | **[Operación Destructiva]** Prunea ramas remotas e inactiva y elimina archivos no rastreados. |
-| `ci-status` | Consulta el estado de ejecución de pipelines en GitHub Actions mediante tokens PAT. |
-| `export` | Genera un snapshot en formato JSON de la estructura de repositorios y orígenes. |
-| `restore` | Clona y reconstruye espacios de trabajo basándose en un archivo de snapshot JSON. |
-| `auth` | Gestiona de forma segura las credenciales y Personal Access Tokens (PAT) de GitHub. |
-
-### Argumentos y Banderas
-
-| Flag | Alias | Descripción | Valor por Defecto |
-| :--- | :--- | :--- | :--- |
-| `--dir <Path>` | `-d` | Directorio raíz para el escaneo recursivo de repositorios. | *(Última ruta utilizada)* |
-| `--workers <N>` | `-w` | Número de hilos simultáneos (Límite superior: 50). | `5` |
-| `--autostash` | — | Automatiza el `stash` preventivo durante operaciones de actualización. | `False` |
-| `--branch <Name>` | `-b` | Especifica la rama objetivo (Requerido para la operación `checkout`). | — |
-| `--file <Path>` | `-f` | Archivo JSON de referencia para `export` y `restore`. | `snapshot.json` |
-| `--dry-run` | — | Simula la ejecución sin aplicar cambios reales en el sistema de archivos. | `False` |
-| `--gui` | — | Fuerza el arranque de la interfaz gráfica de usuario. | — |
-| `--log <Path>` | `-l` | Redirige el flujo de salida de la terminal a un archivo log persistente. | — |
+| `status` | análisis visual del árbol de trabajo y divergencia remota. |
+| `fetch` / `pull` | sincronización remota asíncrona con soporte `--autostash`. |
+| `push` / `commit` | operaciones de escritura masiva con diálogos interactivos. |
+| `workspace` | gestión de perfiles: `save`, `load`, `list`, `delete`, `sync`. |
+| `groups` | inspección de la topología lógica y descriptores de proyecto. |
+| `checkout` | transición Head masiva hacia ramas objetivo (`-b branch`). |
+| `ci-status` | monitorización de pipelines de github actions en tiempo real. |
+| `clean` | **[destructivo]** eliminación de ramas muertas y archivos no rastreados. |
 
 ---
 
-## Interfaz Gráfica de Usuario (GUI)
+## 🌍 ecosistema y arquitectura
 
-En instalaciones **Desktop**, la interfaz gráfica puede lanzarse directamente desde el menú de aplicaciones del sistema. Para ejecuciones manuales desde terminal, utilice la bandera de control:
-
-```bash
-gitbulk --gui
-```
-
-La GUI proporciona un entorno centralizado para la supervisión de proyectos, facilitando la ejecución de comandos complejos mediante una interacción visual simplificada.
+- **motor nativo**: migración completa a procesos `subprocess` para máxima velocidad y mínima dependencia.
+- **gui de alta fidelidad**: interfaz dinámica multi-lenguaje (es, us, uk, de, fr) con soporte para modo oscuro nativo.
+- **hubs de gestión**: diálogos avanzados para resolución de conflictos (`conflicthub`) y previsualización de sincronización.
+- **diagnóstico inteligente**: detección automática de agentes ssh y validación de conectividad.
 
 ---
 
-## Arquitectura y Persistencia
+## 📖 documentación completa
 
-En su primera ejecución, GitBulk inicializa un esquema de configuración persistente en el directorio personal del usuario (ej. `~/.git_manager_pro.json`). Este archivo centraliza la gestión de estados, rutas de trabajo y tokens de acceso, garantizando una experiencia de usuario coherente entre sesiones.
+para una inmersión profunda en la arquitectura y escenarios de uso avanzado, consulta los manuales técnicos:
+
+📕 [documentación en castellano](project-doc/es-project-doc.md)  
+📘 [english technical documentation](project-doc/en-project-doc.md)
 
 ---
 
-**GitBulk** es un proyecto de código abierto. Puede contribuir al desarrollo o reportar incidencias a través del repositorio oficial.
-
-*Desarrollado por rezzt-dev.*
+desarrollado con ❤️ por **rezzt-dev**.  
+*GitBulk: senior-level workspace management.*
