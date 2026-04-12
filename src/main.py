@@ -65,8 +65,11 @@ def main():
     
     sys.exit(run_gui())
 
+  # ── CLI Mode Only ──────────────────────────────────────────────────────
+  # Force ANSI support on Windows and clear terminal
   os.system("")
   os.system("cls" if os.name == "nt" else "clear")
+
   config = load_config()
   default_dir = config.get("last_directory", os.getcwd())
 

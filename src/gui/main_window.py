@@ -465,6 +465,26 @@ class MainWindow(QMainWindow):
         elif "started" in ssh_info:
             self.append_log(f"[INFO] SSH: {ssh_info}", "#888888")
 
+    def closeEvent(self, event):
+        """
+        Persists the active working directory and current virtual layout
+        before the window closes so the next launch can restore the full
+        session (directory + groups + repositories).
+        """
+        try:
+            # 1. Global config (last_directory)
+            _cfg = load_config()
+            if self.target_dir:
+                _cfg["last_directory"] = self.target_dir
+                save_config(_cfg)
+            
+            # 2. Virtual layout (groups)
+            if self.target_dir and (self.workspace_data or self.found_repos):
+                self._save_virtual_layout()
+        except Exception:
+            pass
+        super().closeEvent(event)
+
     # ── Sidebar ───────────────────────────────────────────────────────────────
 
     def _build_sidebar(self, parent_layout):
@@ -664,28 +684,40 @@ class MainWindow(QMainWindow):
             return
             
         snapshot = workspaces[name]
-        # In GUI, we typically want to ask which directory to use if we are not in one
-        # or just use the current target_dir if available.
-        # However, for workspaces, they often define their own root.
-        
-        # For now, let's just use the logic from 'import_workspace'
         self.append_log(f"Loading workspace: {name}", "#3FB950")
-        
-        # We need to simulate the 'import' behavior
-        # But wait, import_workspace asks for a file.
-        # We'll just pass the snapshot data directly to the pending layout logic.
-        
-        # We need a root directory. If the snapshot was saved with a root, where is it?
-        # My 'save' logic in main.py saved a dict of repos with relative paths.
-        
-        # Actually, let's keep it simple: load into current target_dir
-        if not self.target_dir:
-            self.prompt_directory_selection()
-            if not self.target_dir: return
 
-        self._pending_import_layout = snapshot
+        # Resolve the root directory: 
+        # Named workspaces in config can be saved as a list of repos (CLI style)
+        # or as a dict containing __root_dir__.
+        root_dir = ""
+        if isinstance(snapshot, dict):
+             root_dir = snapshot.get("__root_dir__", "")
+        
+        # Fallback: if we don't have a recorded root, use the current active dir
+        if not root_dir or not os.path.isdir(root_dir):
+            root_dir = self.target_dir
+            
+        # Last fallback: if still no directory, ask the user
+        if not root_dir or not os.path.isdir(root_dir):
+            self.prompt_directory_selection()
+            root_dir = self.target_dir
+
+        if not root_dir:
+            return
+
+        # Prepare the layout for rendering
+        layout = []
+        if isinstance(snapshot, dict):
+            # Strip metadata keys
+            layout = {k: v for k, v in snapshot.items() if k != "__root_dir__"}
+            # Actually, if it's a dict from GUI, it might be structured differently.
+            # But based on current code, GUI snapshots are usually stored as lists of groups/repos.
+        elif isinstance(snapshot, list):
+            layout = snapshot
+
+        self._pending_import_layout = layout
         # The scanner will pick it up after scan finishes
-        self.load_directory(self.target_dir)
+        self.load_directory(root_dir)
 
     def retranslate_ui(self):
         """Refreshes all UI strings without restarting."""
@@ -963,6 +995,16 @@ class MainWindow(QMainWindow):
         self.lbl_workspace_title.setText(base)
         self.lbl_workspace_path.setText(dir_path)
         self.lbl_repo_count.hide()
+
+        # ── Persist last working directory so it survives restarts
+        try:
+            _cfg = load_config()
+            _cfg["last_directory"] = dir_path
+            save_config(_cfg)
+            # We also trigger a layout save if we switched directories
+            self._save_virtual_layout()
+        except Exception:
+            pass
 
         self._set_status(TR("status_scanning"), dir_path, "", "#E2E2E2")
         self.repo_model.removeRows(0, self.repo_model.rowCount())
@@ -2106,7 +2148,13 @@ class ConflictHubDialog(QDialog):
             # For GUI, I should probably just launch the editor and not wait for content if we just want them to solve conflicts.
             editor = os.environ.get('EDITOR') or ('notepad.exe' if os.name == 'nt' else 'nano')
             import subprocess
-            subprocess.Popen([editor, path]) # Open the folder in editor or the conflicted path
+            
+            # ── Windows specific: Suppress console windows for silent GUI
+            creationflags = 0
+            if os.name == 'nt':
+                creationflags = 0x08000000 # subprocess.CREATE_NO_WINDOW
+
+            subprocess.Popen([editor, path], creationflags=creationflags) # Open the folder in editor or the conflicted path
         except Exception as e:
             QMessageBox.critical(self, "GitBulk", TR("conflict_hub_err_editor", e=e))
 

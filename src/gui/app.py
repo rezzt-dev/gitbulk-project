@@ -101,12 +101,15 @@ def run_gui():
     window = MainWindow()
     window.show()
 
-    # Auto-load last directory
+    # Auto-load last session
     config = load_config()
-    default_dir = config.get("last_directory", os.getcwd())
-    if default_dir and os.path.exists(default_dir):
+    default_dir = config.get("last_directory")
+    
+    if default_dir and os.path.exists(default_dir) and os.path.isdir(default_dir):
+        window.append_log(f"Restoring session: {os.path.basename(default_dir)}", "#888888")
         window.load_directory(default_dir)
     else:
+        # Fallback to current working directory if it's a valid git container or just start idle
         window.append_log(TR("status_idle_msg"), "#888888")
 
     return app.exec()

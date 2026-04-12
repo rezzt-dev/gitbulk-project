@@ -50,8 +50,11 @@ def _run_git_command(args: List[str], cwd: str, env: Optional[Dict[str, str]] = 
         base_env.update(env)
         
     try:
-        # Use shell=False for security and performance
-        # Use encoding='utf-8' for clean string handling
+        # ── Windows specific: Suppress console windows for silent GUI
+        creationflags = 0
+        if sys.platform == "win32":
+            creationflags = 0x08000000 # subprocess.CREATE_NO_WINDOW
+
         process = subprocess.run(
             [git_path] + args,
             cwd=cwd,
@@ -60,7 +63,8 @@ def _run_git_command(args: List[str], cwd: str, env: Optional[Dict[str, str]] = 
             encoding="utf-8",
             errors="replace",
             env=base_env,
-            check=False
+            check=False,
+            creationflags=creationflags
         )
         return process.returncode, process.stdout, process.stderr
     except FileNotFoundError:

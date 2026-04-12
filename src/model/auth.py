@@ -20,7 +20,8 @@ def _restrict_file_permissions(filepath: Path) -> None:
             username = os.environ.get("USERNAME", "")
             subprocess.run(
                 ["icacls", str(filepath), "/inheritance:r", "/grant:r", f"{username}:F"],
-                check=True, capture_output=True
+                check=True, capture_output=True,
+                creationflags=0x08000000 if sys.platform == "win32" else 0
             )
         except (subprocess.CalledProcessError, FileNotFoundError):
             pass
@@ -38,7 +39,8 @@ def setup_global_git_credentials(username: str, token: str) -> bool:
       ["git", "config", "--global", "credential.helper", "store"],
        check=True,
        capture_output=True,
-       text=True
+       text=True,
+       creationflags=0x08000000 if sys.platform == "win32" else 0
     )
     
   except subprocess.CalledProcessError as e:
@@ -146,7 +148,8 @@ def ensure_ssh_agent() -> Tuple[bool, str]:
             # Check service status
             res = subprocess.run(
                 ["powershell", "-Command", "Get-Service ssh-agent"],
-                capture_output=True, text=True
+                capture_output=True, text=True,
+                creationflags=0x08000000 if sys.platform == "win32" else 0
             )
             if "Running" in res.stdout:
                 return True, "OpenSSH Agent service is running."
@@ -154,7 +157,8 @@ def ensure_ssh_agent() -> Tuple[bool, str]:
             # Attempt to start service
             subprocess.run(
                 ["powershell", "-Command", "Start-Service ssh-agent"],
-                capture_output=True, check=True
+                capture_output=True, check=True,
+                creationflags=0x08000000 if sys.platform == "win32" else 0
             )
             return True, "OpenSSH Agent service started."
         except Exception:
@@ -172,7 +176,8 @@ def test_ssh_connectivity() -> Tuple[bool, str]:
         # Using -T to test connectivity without a terminal
         res = subprocess.run(
             ["ssh", "-T", "git@github.com", "-o", "ConnectTimeout=5"],
-            capture_output=True, text=True
+            capture_output=True, text=True,
+            creationflags=0x08000000 if sys.platform == "win32" else 0
         )
         # GitHub returns code 1 even on success ("Hi username! You've successfully authenticated...")
         if "successfully authenticated" in res.stderr:
