@@ -2,15 +2,10 @@
 
 
 a = Analysis(
-    ['D:\\repositorios\\desktop-projects\\gitbulk-project\\scripts\\..\\src\\main.py'],
-    pathex=['D:\\repositorios\\desktop-projects\\gitbulk-project\\scripts\\..\\src'],
+    ['src\\main.py'],
+    pathex=['src'],
     binaries=[],
-    datas=[
-        ('D:\\repositorios\\desktop-projects\\gitbulk-project\\assets', 'assets'), 
-        ('D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\gui\\icons', 'gui/icons'), 
-        ('D:\\repositorios\\desktop-projects\\gitbulk-project\\src\\gui\\theme.qss', 'gui'),
-        ('D:\\repositorios\\desktop-projects\\gitbulk-project\\vendor\\git', 'vendor/git')
-    ],
+    datas=[('assets', 'assets'), ('src/gui/icons', 'src/gui/icons'), ('src/gui/theme.qss', 'src/gui'), ('vendor/git', 'vendor/git')],
     hiddenimports=['gui.translations', 'gui.icon_manager', 'PySide6.QtSvg', 'PySide6.QtSvgWidgets', 'PySide6.QtXml'],
     hookspath=[],
     hooksconfig={},
@@ -27,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='GitBulk-GUI-Windows',
+    name='gitbulk-gui-windows',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -40,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['D:\\repositorios\\desktop-projects\\gitbulk-project\\assets\\gitbulk.ico'],
+    icon=['assets\\gitbulk.ico'],
 )

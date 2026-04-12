@@ -1,0 +1,17 @@
+# archivos de compilación de PyInstaller
+build/
+dist/
+*.spec
+
+# entornos virtuales de Python
+venv/
+env/
+.env/
+
+# cache compilada de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# cache de pruebas (Pytest)
+.pytest_cache/
