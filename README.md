@@ -17,15 +17,30 @@ GitBulk es una herramienta integral (cli y gui) diseñada para la gestión concu
 
 puedes desplegar el entorno completo con un solo comando en tu terminal:
 
-### GitBulk desktop (gui + cli)
+### GitBulk desktop - gui + cli
+versión completa con interfaz gráfica, acceso directo en el sistema y soporte integrado para cli.
+
 **windows (powershell):**
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1" | iex
+iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/windows/install_gui.ps1" | iex
 ```
 
 **linux (bash):**
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install_linux.sh" | bash
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/linux/install_gui.sh" | bash
+```
+
+### GitBulk cli - terminal only
+distribución ligera sin dependencias gráficas, optimizada para entornos de servidor y pipelines.
+
+**windows (powershell):**
+```powershell
+iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/windows/install_cli.ps1" | iex
+```
+
+**linux (bash):**
+```bash
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/linux/install_cli.sh" | bash
 ```
 
 ---

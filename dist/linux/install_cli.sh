@@ -1,93 +1,85 @@
 #!/bin/bash
-echo "Iniciando instalación de gitbulk CLI..."
 
-# 1. Comprobar dependencias mínimas (git y python)
+# GitBulk linux installer - cli edition
+# ---------------------------------------------------------
+# copyright (c) rezzt-dev. all rights reserved.
+
+set -e
+
+GREEN='\033[0;32m'
+INFO='\033[0;37m'
+YELLOW='\033[0;33m'
+ERROR='\033[0;31m'
+NC='\033[0m'
+
+VERSION="v1.4.0"
+BINARY_NAME="gitbulk-linux"
+INSTALL_DIR="$HOME/.local/bin"
+DOWNLOAD_URL="https://github.com/rezzt-dev/gitbulk-project/releases/download/${VERSION}/${BINARY_NAME}"
+
+echo ""
+echo -e "${GREEN}  =====================================${NC}"
+echo -e "${GREEN}         GitBulk ${VERSION}             ${NC}"
+echo -e "${INFO}         linux installer - cli          ${NC}"
+echo -e "${GREEN}  =====================================${NC}"
+echo ""
+
+# 1. comprobar dependencias minimas
 if ! command -v git &> /dev/null; then
-    echo "error: No se ha encontrado 'git'. Por favor, instálalo antes de continuar."
+    echo -e "${ERROR}[error] 'git' no encontrado. instalalo antes de continuar.${NC}"
     exit 1
 fi
+echo -e "${GREEN}[ok]   git detectado: $(git --version)${NC}"
 
-PYTHON_CMD=""
-if command -v python3 &> /dev/null; then
-    PYTHON_CMD="python3"
-elif command -v python &> /dev/null; then
-    PYTHON_CMD="python"
-else
-    echo "error: No se ha encontrado 'python' o 'python3'. Por favor, instálalo antes de continuar."
+# 2. crear directorio de instalacion
+mkdir -p "$INSTALL_DIR"
+echo -e "${INFO}[info] directorio de instalacion: $INSTALL_DIR${NC}"
+
+# 3. descargar binario desde github releases
+echo -e "${INFO}[info] descargando GitBulk cli ${VERSION}...${NC}"
+if ! curl -fsSL -o "$INSTALL_DIR/$BINARY_NAME" "$DOWNLOAD_URL"; then
+    echo -e "${ERROR}[error] fallo al descargar el binario. verifica tu conexion.${NC}"
+    echo -e "${INFO}        url: $DOWNLOAD_URL${NC}"
     exit 1
 fi
+chmod +x "$INSTALL_DIR/$BINARY_NAME"
+echo -e "${GREEN}[ok]   binario instalado en $INSTALL_DIR/$BINARY_NAME${NC}"
 
-# 2. Configurar variables de directorios
-TARGET_FOLDER="$HOME/.local/bin"
-EXE_PATH="$TARGET_FOLDER/gitbulk"
-SPEC_FILE="gitbulk.spec"
-TEMP_DIR="/tmp/gitbulk_src_$$"
+# 4. crear alias de acceso rapido (gitbulk)
+ln -sf "$INSTALL_DIR/$BINARY_NAME" "$INSTALL_DIR/gitbulk" 2>/dev/null || true
+echo -e "${GREEN}[ok]   alias 'gitbulk' creado.${NC}"
 
-mkdir -p "$TARGET_FOLDER"
+# 5. configurar path si es necesario
+echo -e "${INFO}[info] verificando configuracion del path...${NC}"
+if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+    SHELL_RC=""
+    if [[ "$SHELL" == *"zsh"* ]]; then
+        SHELL_RC="$HOME/.zshrc"
+    else
+        SHELL_RC="$HOME/.bashrc"
+    fi
 
-echo "Descargando todo el código fuente..."
-git clone https://github.com/rezzt-dev/gitbulk-project.git "$TEMP_DIR"
-if [ $? -ne 0 ]; then
-    echo "error: Falló la clonación del repositorio remoto."
-    exit 1
-fi
-
-cd "$TEMP_DIR" || exit 1
-
-echo "Creando entorno virtual (venv)..."
-$PYTHON_CMD -m venv venv
-if [ $? -ne 0 ]; then
-    echo "error: No se pudo crear el entorno virtual. Es posible que te falte el paquete python3-venv en tu sistema."
-    cd "$HOME" || exit 1
-    rm -rf "$TEMP_DIR"
-    exit 1
-fi
-
-echo "Instalando dependencias en el entorno virtual..."
-./venv/bin/pip install -r requirements.txt pyinstaller
-if [ $? -ne 0 ]; then
-    echo "error: Falló la instalación de dependencias."
-    cd "$HOME" || exit 1
-    rm -rf "$TEMP_DIR"
-    exit 1
-fi
-
-echo "Compilando el ejecutable localmente..."
-./venv/bin/pyinstaller "$SPEC_FILE" --clean
-
-DIST_PATH="dist/gitbulk"
-if [ ! -f "$DIST_PATH" ]; then
-    echo "error: Falló la compilación local. No se encontró $DIST_PATH."
-    cd "$HOME" || exit 1
-    rm -rf "$TEMP_DIR"
-    exit 1
-fi
-
-echo "Moviendo el ejecutable a la ruta final..."
-cp "$DIST_PATH" "$EXE_PATH"
-chmod +x "$EXE_PATH"
-
-echo "Ok: Limpieza terminada e instalación exitosa."
-cd "$HOME" || exit 1
-rm -rf "$TEMP_DIR"
-
-echo "Configurando variables de entorno..."
-
-if ! echo "$PATH" | grep -q "$TARGET_FOLDER"; then
-    if [ -f "$HOME/.zshrc" ]; then
-        echo -e '\nexport PATH="'"$TARGET_FOLDER"':$PATH"' >> "$HOME/.zshrc"
-        echo "Ok: gitbulk añadido a ~/.zshrc."
-    elif [ -f "$HOME/.bashrc" ]; then
-        echo -e '\nexport PATH="'"$TARGET_FOLDER"':$PATH"' >> "$HOME/.bashrc"
-        echo "Ok: gitbulk añadido a ~/.bashrc."
+    if [ -f "$SHELL_RC" ]; then
+        if ! grep -q "$INSTALL_DIR" "$SHELL_RC"; then
+            echo "export PATH=\"\$PATH:$INSTALL_DIR\"" >> "$SHELL_RC"
+            echo -e "${GREEN}[ok]   ruta añadida a $SHELL_RC${NC}"
+        fi
     fi
 else
-    echo "Ok: gitbulk ya estaba configurado en tu PATH."
+    echo -e "${INFO}[info] la ruta ya existe en el path.${NC}"
 fi
 
-echo "========================================="
-echo "  ¡Instalación completada con éxito!     "
-echo "========================================="
-echo "Por favor, cierra esta terminal y abre una nueva,"
-echo "o ejecuta: source ~/.bashrc (o ~/.zshrc)"
-echo "Luego simplemente escribe: gitbulk --help"
+# 6. resumen final
+echo ""
+echo -e "${GREEN}  =====================================${NC}"
+echo -e "${GREEN}     GitBulk cli instalado!            ${NC}"
+echo -e "${GREEN}  =====================================${NC}"
+echo -e "${INFO}  - directorio : $INSTALL_DIR${NC}"
+echo -e "${INFO}  - version    : $VERSION${NC}"
+echo -e "${INFO}  - comando    : gitbulk --help${NC}"
+echo ""
+echo -e "${INFO}  nota: reinicia el terminal o ejecuta:${NC}"
+echo -e "${INFO}        source ~/.bashrc (o ~/.zshrc)${NC}"
+echo -e "${INFO}        luego: gitbulk --help${NC}"
+echo ""
+read -p "presiona enter para finalizar..."
