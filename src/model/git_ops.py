@@ -1,145 +1,254 @@
 import os
-from typing import Tuple
-from git import Repo, exc
+import subprocess
+import sys
+from typing import Tuple, Dict, List, Optional
 from .error_handler import parse_git_error
 
-def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False, autostash: bool = False, target_branch: str = None, dry_run: bool = False) -> Tuple[str, str, str, str]:
+# --- LOW-LEVEL ENGINE (Performance optimized) ---
+
+def _resolve_git_executable() -> str:
+    """
+    Resolves the path to the git executable, prioritizing bundled versions.
+    Priority:
+    1. PyInstaller bundled path (sys._MEIPASS).
+    2. Local path (relative to executable).
+    3. System PATH.
+    """
+    # 1. Check for PyInstaller bundled Git
+    if hasattr(sys, '_MEIPASS'):
+        bin_folder = os.path.join(sys._MEIPASS, "vendor", "git", "cmd")
+        bundled_git = os.path.join(bin_folder, "git.exe" if sys.platform == "win32" else "git")
+        if os.path.exists(bundled_git):
+            return bundled_git
+
+    # 2. Check for local 'bin' folder (non-onefile bundle or local dev)
+    local_bin = os.path.join(os.path.dirname(sys.executable), "vendor", "git", "cmd")
+    local_git = os.path.join(local_bin, "git.exe" if sys.platform == "win32" else "git")
+    if os.path.exists(local_git):
+        return local_git
+
+    # 3. Fallback to system path
+    return "git"
+
+def _run_git_command(args: List[str], cwd: str, env: Optional[Dict[str, str]] = None) -> Tuple[int, str, str]:
+    """
+    Executes a git command via subprocess with controlled environment.
+    Returns (returncode, stdout, stderr).
+    """
+    git_path = _resolve_git_executable()
+    
+    # Disable terminal prompts to avoid hanging on SSH/Auth
+    base_env = os.environ.copy()
+    base_env["GIT_TERMINAL_PROMPT"] = "0"
+    
+    # If using bundled git, we might need to add its bin folder to PATH so it finds helpers
+    if git_path != "git":
+        git_dir = os.path.dirname(git_path)
+        base_env["PATH"] = git_dir + os.pathsep + base_env.get("PATH", "")
+
+    if env:
+        base_env.update(env)
+        
+    try:
+        # Use shell=False for security and performance
+        # Use encoding='utf-8' for clean string handling
+        process = subprocess.run(
+            [git_path] + args,
+            cwd=cwd,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            env=base_env,
+            check=False
+        )
+        return process.returncode, process.stdout, process.stderr
+    except FileNotFoundError:
+        return -1, "", f"Git executable not found at: {git_path}"
+    except Exception as e:
+        return -1, "", str(e)
+
+def _parse_porcelain_v2(output: str) -> Dict[str, str]:
+    """
+    Parses git status --porcelain=v2 --branch output.
+    Returns a normalized dictionary of state.
+    """
+    state = {
+        "branch": "HEAD",
+        "ahead": 0,
+        "behind": 0,
+        "is_dirty": False,
+        "conflict": False,
+        "modified_count": 0
+    }
+    
+    lines = output.strip().split('\n')
+    for line in lines:
+        if not line: continue
+        
+        # Headers
+        if line.startswith("# branch.head "):
+            state["branch"] = line[14:].strip()
+        elif line.startswith("# branch.ab "):
+            parts = line[12:].split()
+            if len(parts) >= 2:
+                state["ahead"] = int(parts[0].replace("+", ""))
+                state["behind"] = int(parts[1].replace("-", ""))
+        
+        # Files (Tracked/Untracked/Unmerged)
+        elif line.startswith(("1 ", "2 ", "? ", "u ")):
+            state["is_dirty"] = True
+            state["modified_count"] += 1
+            if line.startswith("u "):
+                state["conflict"] = True
+                
+    return state
+
+# --- HIGH-LEVEL OPERATIONS ---
+
+def run_git_operation(repo_path: str, operation: str, allow_prompt: bool = False, autostash: bool = False, target_branch: str = None, dry_run: bool = False, **kwargs) -> Tuple[str, str, str, str]:
     try:
         if not os.path.exists(os.path.join(repo_path, ".git")):
             return "ERROR", "Not a Git directory", repo_path, ""
-            
-        repo = Repo(repo_path)
-        
+
         if operation == "status":
-            is_dirty = repo.is_dirty(untracked_files=True)
-            if is_dirty:
-                modified_count = len(repo.untracked_files) + len([diff for diff in repo.index.diff(None)]) + len([diff for diff in repo.index.diff('HEAD')])
-                return "MODIFIED", str(modified_count), repo_path, ""
-            else:
-                try:
-                    active_branch = repo.active_branch
-                    tracking_branch = active_branch.tracking_branch()
-                    if tracking_branch:
-                        commits_behind = list(repo.iter_commits(f'{active_branch.name}..{tracking_branch.name}'))
-                        commits_ahead = list(repo.iter_commits(f'{tracking_branch.name}..{active_branch.name}'))
-                        if commits_ahead:
-                            return "AHEAD", str(len(commits_ahead)), repo_path, active_branch.name
-                        elif commits_behind:
-                            return "BEHIND", str(len(commits_behind)), repo_path, active_branch.name
-                    return "CLEAN", "", repo_path, ""
-                except TypeError:
-                    return "CLEAN", "Detached HEAD", repo_path, ""
-                except ValueError:
-                    return "CLEAN", "No commits yet", repo_path, ""
+            code, stdout, stderr = _run_git_command(["status", "--porcelain=v2", "--branch"], repo_path)
+            if code != 0: return "ERROR", "Status failed", repo_path, parse_git_error(stderr)
+            
+            state = _parse_porcelain_v2(stdout)
+            if state["is_dirty"]:
+                return "MODIFIED", str(state["modified_count"]), repo_path, ""
+            
+            if state["ahead"] > 0:
+                return "AHEAD", str(state["ahead"]), repo_path, state["branch"]
+            elif state["behind"] > 0:
+                return "BEHIND", str(state["behind"]), repo_path, state["branch"]
+                
+            return "CLEAN", "", repo_path, ""
 
         if operation in ["fetch", "sync"]:
-            output = repo.git.fetch()
+            # Native fetch
+            code, stdout, stderr = _run_git_command(["fetch", "--prune"], repo_path)
+            # Fetch often prints to stderr even on success (progress)
+            output = stdout + stderr
+
+            # Post-fetch status
+            code, stdout, stderr = _run_git_command(["status", "--porcelain=v2", "--branch"], repo_path)
+            state = _parse_porcelain_v2(stdout)
             
-            # Use shared status logic for detailed reporting
-            is_dirty = repo.is_dirty(untracked_files=True)
-            if is_dirty:
-                modified_count = len(repo.untracked_files) + len([diff for diff in repo.index.diff(None)]) + len([diff for diff in repo.index.diff('HEAD')])
-                return "MODIFIED", f"{modified_count} files", repo_path, output
+            if state["is_dirty"]:
+                return "MODIFIED", f"{state['modified_count']} files", repo_path, output
             
-            try:
-                active_branch = repo.active_branch
-                tracking_branch = active_branch.tracking_branch()
-                if tracking_branch:
-                    commits_behind = list(repo.iter_commits(f'{active_branch.name}..{tracking_branch.name}'))
-                    commits_ahead = list(repo.iter_commits(f'{tracking_branch.name}..{active_branch.name}'))
-                    
-                    if commits_ahead and commits_behind:
-                        return "DIVERGENT", f"↑{len(commits_ahead)} ↓{len(commits_behind)}", repo_path, output
-                    elif commits_ahead:
-                        return "AHEAD", f"{len(commits_ahead)} commits", repo_path, output
-                    elif commits_behind:
-                        return "BEHIND", f"{len(commits_behind)} commits", repo_path, output
-                return "OK", "Up to date", repo_path, output
-            except Exception:
-                return "OK", "Up to date", repo_path, output
+            if state["ahead"] > 0 and state["behind"] > 0:
+                return "DIVERGENT", f"↑{state['ahead']} ↓{state['behind']}", repo_path, output
+            elif state["ahead"] > 0:
+                return "AHEAD", f"{state['ahead']} commits", repo_path, output
+            elif state["behind"] > 0:
+                return "BEHIND", f"{state['behind']} commits", repo_path, output
+                
+            return "OK", "Up to date", repo_path, output
 
         if operation == "clean":
-            if dry_run:
-                output_prune = repo.git.fetch("--prune", "--dry-run")
-                output_clean = repo.git.clean("-xfd", "-n")
-                preview = f"{output_prune}\n{output_clean}".strip()
-                return "SIMULATED", "[dry-run] clean", repo_path, preview if preview else "Nothing to remove."
-            output_prune = repo.git.fetch("--prune")
-            output_clean = repo.git.clean("-xfd")
-            return "CLEANED", "Aggressive cleanup complete", repo_path, f"{output_prune}\n{output_clean}".strip()
+            args = ["clean", "-xfd"]
+            if dry_run: args.append("-n")
+            
+            # Prune first
+            _run_git_command(["fetch", "--prune"], repo_path)
+            code, stdout, stderr = _run_git_command(args, repo_path)
+            
+            status = "SIMULATED" if dry_run else "CLEANED"
+            detail = "[dry-run] clean" if dry_run else "Aggressive cleanup complete"
+            return status, detail, repo_path, stdout
 
         if operation == "pull":
-            is_dirty = repo.is_dirty(untracked_files=True)
+            # Check dirty
+            code, stdout, stderr = _run_git_command(["status", "--porcelain=v2"], repo_path)
+            state = _parse_porcelain_v2(stdout)
             
-            if is_dirty and not autostash:
-                return "CONFLICT", "Local changes prevent update", repo_path, "Commit your changes or enable --autostash"
+            if state["is_dirty"] and not autostash:
+                return "CONFLICT", "Local changes prevent update", repo_path, "Commit changes or use --autostash"
                 
-            args = ["--ff-only"]
-            if autostash:
-                args.append("--autostash")
-            output = repo.git.pull(*args)
+            cmd = ["pull", "--ff-only"]
+            if autostash: cmd.append("--autostash")
             
-            if is_dirty and autostash:
-                return "STASH_RESTORED", "Changes synced and auto-stashed", repo_path, output
-
-            return "OK", "", repo_path, output
+            code, stdout, stderr = _run_git_command(cmd, repo_path)
+            if code == 0:
+                status = "STASH_RESTORED" if autostash and state["is_dirty"] else "OK"
+                return status, "Synced", repo_path, stdout
+            else:
+                return "ERROR", "Pull failed", repo_path, parse_git_error(stderr)
 
         if operation == "checkout":
             if not target_branch:
-                return "ERROR", "Operation failed", repo_path, "Missing target branch name. Use the -b flag."
+                return "ERROR", "Missing branch", repo_path, ""
             
-            try:
-                if not repo.head.is_detached and repo.active_branch.name == target_branch:
-                    return "CLEAN", "Already on target branch", repo_path, ""
-            except TypeError:
-                pass
+            # 1. Is it local?
+            code, stdout, stderr = _run_git_command(["checkout", target_branch], repo_path)
+            if code == 0:
+                return "CHECKOUT", "Switched", repo_path, stdout
             
-            if target_branch in [h.name for h in repo.heads]:
-                repo.heads[target_branch].checkout()
-                return "CHECKOUT", "Switched to local branch", repo_path, ""
+            # 2. Try remote
+            code, stdout, stderr = _run_git_command(["checkout", "-t", f"origin/{target_branch}"], repo_path)
+            if code == 0:
+                return "CHECKOUT", "Tracking remote", repo_path, stdout
+                
+            return "IGNORED", "Branch not found", repo_path, parse_git_error(stderr)
+
+        if operation == "commit":
+            # 1. Check if dirty
+            code, stdout, stderr = _run_git_command(["status", "--porcelain=v2"], repo_path)
+            state = _parse_porcelain_v2(stdout)
             
-            if "origin" in repo.remotes:
-                origin = repo.remotes.origin
-                remote_ref = f"{origin.name}/{target_branch}"
-                refs = [r.name for r in origin.refs]
-                if remote_ref in refs:
-                    repo.create_head(target_branch, origin.refs[target_branch]).set_tracking_branch(origin.refs[target_branch]).checkout()
-                    return "CHECKOUT", "Tracking remote branch", repo_path, ""
-                    
-            return "IGNORED", "Branch not found", repo_path, "Skipping repository"
+            if not state["is_dirty"]:
+                return "OK", "Nothing to commit", repo_path, "Working tree clean"
+            
+            # 2. Add all changes
+            _run_git_command(["add", "."], repo_path)
+            
+            # 3. Commit
+            msg = kwargs.get("message", "GitBulk: Bulk update")
+            body = kwargs.get("body", "")
+            cmd = ["commit", "-m", msg]
+            if body:
+                cmd.extend(["-m", body])
+            
+            code, stdout, stderr = _run_git_command(cmd, repo_path)
+            if code == 0:
+                return "COMMITTED", "Changes saved", repo_path, stdout
+            else:
+                return "ERROR", "Commit failed", repo_path, parse_git_error(stderr)
 
-        return "ERROR", "Unsupported operation", repo_path, ""
+        if operation == "push":
+            # 1. Check if ahead (to avoid unnecessary network calls)
+            code, stdout, stderr = _run_git_command(["status", "--porcelain=v2", "--branch"], repo_path)
+            state = _parse_porcelain_v2(stdout)
+            
+            if state["ahead"] == 0:
+                return "OK", "Already synced", repo_path, "Local branch is NOT ahead of origin"
+            
+            # 2. Push current HEAD to origin
+            code, stdout, stderr = _run_git_command(["push", "origin", "HEAD"], repo_path)
+            if code == 0:
+                return "PUSHED", "Uploaded to origin", repo_path, stdout
+            else:
+                return "ERROR", "Push failed", repo_path, parse_git_error(stderr)
 
-    except exc.GitCommandError as e:
-        error_msg = parse_git_error(e)
-        if not allow_prompt and ("Error de Autenticación" in error_msg):
-            return "AUTH", "", repo_path, "Requiere configuración."
+        return "ERROR", "Unknown op", repo_path, ""
 
-        if operation == "pull":
-            if "Autostash conflict" in error_msg or "Conflicto de Autostash" in error_msg:
-                return "STASH_CONFLICT", "Conflict restoring stash", repo_path, error_msg
-            if "Pull conflict" in error_msg or "Conflicto de pull" in error_msg:
-                return "CONFLICT", "Local changes prevent update", repo_path, error_msg
-            if "Divergent branches" in error_msg or "Ramas divergentes" in error_msg:
-                return "DIVERGENT", "Manual merge required", repo_path, error_msg
-
-        return "ERROR", "Operation failed", repo_path, error_msg
     except Exception as e:
-        return "ERROR", "Unexpected engine error", repo_path, str(e)
-
+        return "ERROR", "Engine Exception", repo_path, str(e)
 
 def get_repo_metadata(repo_path: str) -> dict:
     metadata = {"url": "", "branch": "", "error": ""}
     try:
-        repo = Repo(repo_path)
-        if repo.remotes:
-            metadata["url"] = list(repo.remotes[0].urls)[0]
-        if not repo.head.is_detached:
-            metadata["branch"] = repo.active_branch.name
-    except exc.InvalidGitRepositoryError:
-        metadata["error"] = "Invalid or corrupted Git repository."
-    except PermissionError:
-        metadata["error"] = "Insufficient read permissions on the repository."
+        # Get URL
+        code, stdout, stderr = _run_git_command(["remote", "get-url", "origin"], repo_path)
+        if code == 0: metadata["url"] = stdout.strip()
+        
+        # Get Branch
+        code, stdout, stderr = _run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], repo_path)
+        if code == 0: metadata["branch"] = stdout.strip()
+        
     except Exception as e:
         metadata["error"] = str(e)
     return metadata
@@ -148,48 +257,44 @@ def clone_repo(target_dir: str, repo_info: dict) -> Tuple[str, str, str, str]:
     url = repo_info.get("url")
     branch = repo_info.get("branch")
     
-    if not url:
-        return "ERROR", "Missing remote URL", target_dir, ""
-        
+    if not url: return "ERROR", "Missing URL", target_dir, ""
+    
     try:
-        parent_dir = os.path.dirname(target_dir)
-        if not os.path.exists(parent_dir):
-            try:
-                os.makedirs(parent_dir, exist_ok=True)
-            except OSError:
-                pass
-                
-        repo = Repo.clone_from(url, target_dir)
-        if branch:
-            repo.git.checkout(branch)
-            
-        return "OK", branch if branch else "default", target_dir, "Successfully cloned"
+        os.makedirs(os.path.dirname(target_dir), exist_ok=True)
+        args = ["clone", url, target_dir]
+        if branch: args += ["-b", branch]
         
-    except exc.GitCommandError as e:
-        error_msg = parse_git_error(e)
-        if "System conflict" in error_msg or "Conflicto de sistema" in error_msg:
-            return "CLEAN", "Already exists", target_dir, ""
-        return "ERROR", "", target_dir, error_msg
+        code, stdout, stderr = _run_git_command(args, os.getcwd())
+        if code == 0:
+            return "OK", branch or "main", target_dir, "Cloned"
+        else:
+            err = parse_git_error(stderr)
+            if "already exists" in err or "existe" in err: return "CLEAN", "Exists", target_dir, ""
+            return "ERROR", "Clone failed", target_dir, err
     except Exception as e:
-        return "ERROR", "Critical exception during clone", target_dir, str(e)
+        return "ERROR", "Critical", target_dir, str(e)
 
 def get_all_branches(repo_path: str) -> dict:
     data = {"current": "", "local": [], "remote_only": [], "error": ""}
     try:
-        repo = Repo(repo_path)
-        if not repo.head.is_detached:
-            data["current"] = repo.active_branch.name
-        data["local"] = [h.name for h in repo.heads]
-        if repo.remotes:
-            for r in repo.remotes:
-                for ref in r.refs:
-                    if ref.remote_head != 'HEAD':
-                        if ref.remote_head not in data["local"]:
-                            data["remote_only"].append(f"{r.name}/{ref.remote_head}")
-    except exc.InvalidGitRepositoryError:
-        data["error"] = "Invalid or corrupted Git repository."
-    except PermissionError:
-        data["error"] = "Insufficient read permissions on the repository."
+        # Current
+        code, stdout, stderr = _run_git_command(["rev-parse", "--abbrev-ref", "HEAD"], repo_path)
+        data["current"] = stdout.strip()
+        
+        # Local
+        code, stdout, stderr = _run_git_command(["branch", "--format=%(refname:short)"], repo_path)
+        data["local"] = [l.strip() for l in stdout.split('\n') if l.strip()]
+        
+        # Remote
+        code, stdout, stderr = _run_git_command(["branch", "-r", "--format=%(refname:short)"], repo_path)
+        remote_branches = [l.strip() for l in stdout.split('\n') if l.strip()]
+        # Filter out origin/HEAD and already local ones
+        for rb in remote_branches:
+            if "/HEAD" in rb: continue
+            short_name = rb.split('/', 1)[-1]
+            if short_name not in data["local"]:
+                data["remote_only"].append(rb)
+                
     except Exception as e:
         data["error"] = str(e)
     return data

@@ -18,12 +18,12 @@ Versión completa con interfaz gráfica, accesos directos e integración total e
 
 **Windows (PowerShell):**
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1" | iex
+iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/windows/install_gui.ps1" | iex
 ```
 
 **Linux (Bash):**
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install_linux.sh" | bash
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/linux/install_gui.sh" | bash
 ```
 
 ### GitBulk CLI (Terminal Only)
@@ -32,12 +32,12 @@ Distribución ligera optimizada exclusivamente para entornos de terminal.
 
 **Windows (PowerShell):**
 ```powershell
-iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.ps1" | iex
+iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/windows/install_cli.ps1" | iex
 ```
 
 **Linux / macOS (Bash):**
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/cli/install.sh" | bash
+curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/linux/install_cli.sh" | bash
 ```
 
 ---
