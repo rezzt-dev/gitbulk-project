@@ -1,124 +1,108 @@
-# GitBulk Technical Documentation
+# GitBulk technical documentation
 
-## Table of Contents
-1. [Introduction](#introduction)
-2. [Key Features](#key-features)
-3. [Installation and Deployment](#installation-and-deployment)
-4. [Authentication Management](#authentication-management)
-5. [Operation Catalog](#operation-catalog)
-6. [Global Flags and Parameters](#global-flags-and-parameters)
-7. [Advanced Usage Scenarios](#advanced-usage-scenarios)
-
----
-
-## Introduction
-
-GitBulk is a high-performance, integrated solution (CLI and GUI) built in Python for large-scale Git repository orchestration. Designed for microservice architectures and multi-repository environments, the tool mitigates operational latency through concurrent processing, enabling complete development lifecycles to be executed across hundreds of projects simultaneously and securely.
+## table of contents
+1. [introduction](#introduction)
+2. [key features](#key-features)
+3. [engine architecture](#engine-architecture)
+4. [installation and deployment](#installation-and-deployment)
+5. [authentication management](#authentication-management)
+6. [workspace system](#workspace-system)
+7. [group organization](#group-organization)
+8. [operation catalog](#operation-catalog)
+9. [global flags and parameters](#global-flags-and-parameters)
 
 ---
 
-## Key Features
+## introduction
 
-- **Concurrent Execution**: Engine based on `ThreadPoolExecutor` that eliminates bottlenecks in network and disk operations.
-- **Native Desktop Interface**: High-fidelity application for Windows and Linux environments, featuring dark mode support and real-time monitoring.
-- **Operational Resilience**: Built-in protection mechanisms with interactive prompts to prevent accidental data loss during destructive commands.
-- **High-Density Technical Reporting**: Visualization using the `rich` library, providing compact matrices, color-coded statuses, and progress telemetry.
-- **CI / GitHub Actions Integration**: Native status querying for pipelines directly from the terminal or the desktop interface.
+GitBulk is a high-performance integrated solution (cli and gui) for massive git repository orchestration. designed for microservice architectures, the tool eliminates operational latency through concurrent processing and an optimized native engine.
 
 ---
 
-## Installation and Deployment
+## key features
 
-### Recommended Installation (Web Installer)
+- **intelligent concurrency**: hardware-aware auto-tuning to maximize disk and network throughput.
+- **workspaces**: persistence of entire environments with logical state synchronization.
+- **corporate branding**: minimalist interface with modern typography and strict lowercase compliance.
+- **native multi-language support**: full translation into spanish, english (us/uk), german, and french.
+- **visual conflict management**: dedicated hubs for error resolution and bulk commits.
 
-GitBulk provides optimized one-step installers that automatically configure binaries, shortcuts, and environment variables.
+---
 
-**Windows (PowerShell):**
+## engine architecture
+
+the GitBulk engine has been reprogrammed to utilize native subprocess calls, bypassing external library limitations. it includes:
+- **ui throttling**: batched updates (250ms) for extreme responsiveness.
+- **icon cache**: i/o optimization via static visual asset persistence.
+- **ssh diagnostics**: automatic detection and configuration of ssh agents for secure tunneling.
+
+---
+
+## installation and deployment
+
+### web installers
+
+**windows (powershell):**
 ```powershell
 iwr -useb "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install.ps1" | iex
 ```
 
-**Linux (Bash):**
+**linux (bash):**
 ```bash
 curl -fsSL "https://raw.githubusercontent.com/rezzt-dev/gitbulk-project/main/dist/gui/install_linux.sh" | bash
 ```
 
-### Setup from Source (Development)
-
-For development or customization environments, clone the repository and install the dependency tree:
-
-```bash
-git clone https://github.com/rezzt-dev/gitbulk-project.git
-cd gitbulk-project
-pip install -r requirements.txt
-```
-
 ---
 
-## Authentication Management
+## authentication management
 
-Certain operations (such as `fetch` on private repositories or `ci-status` queries) require valid credentials. GitBulk centralizes this management by requesting a Personal Access Token (PAT) once and storing it securely within the operating system's credentials.
-
-To configure the access environment:
+GitBulk utilizes personal access tokens (pat) stored securely within the system credentials.
 ```bash
 gitbulk auth
 ```
-This command configures the global Git helper, allowing subsequent operations to execute silently without credential prompt interruptions.
 
 ---
 
-## Operation Catalog
+## workspace system
+
+workspaces allow for saving and restoring full states of root directories.
+- **save**: freezes the current topology.
+- **load**: automatically clones missing repositories.
+- **sync**: reconciles disk state with a reference definition, archiving unwanted repositories.
+
+---
+
+## group organization
+
+via the group inspector, GitBulk detects tags in `.gitbulk.repo.json` to logically group repositories (e.g., backend, frontend, microservices).
+
+---
+
+## operation catalog
 
 ### `status`
-Analyzes the working tree state and reports divergence relative to tracked remote branches.
-**States**: `[CLEAN]`, `[MODIFIED]`, `[AHEAD]`, `[BEHIND]`.
+visually analyzes divergences and local states.
 
-### `fetch`
-Downloads remote history metadata without integrating changes into local branches.
-**States**: `[OK]`, `[UPDATES]`.
+### `commit` / `push`
+bulk write operations with support for custom messages and interactive dialogs.
 
-### `pull`
-Updates the active branch using a `fast-forward only` integration strategy.
-**Suggested Flags**: `--autostash`.
+### `workspace`
+commands: `save`, `load`, `list`, `delete`, `sync`.
 
-### `checkout`
-Performs a bulk transition of `HEAD` towards the specified branch.
-**Required Parameter**: `-b <branch_name>`.
+### `groups`
+inspection of the logical topology of the workspace.
 
-### `current-branch`
-Generates an ultra-compact topographic map showing the active branch and local/remote references.
-
-### `clean`
-**Destructive Operation**: Executes `git fetch --prune` and `git clean -xfd`. Removes dead remote references and untracked files. Requires interactive confirmation.
+### `fetch` / `pull`
+remote synchronization with `--autostash` support.
 
 ### `ci-status`
-Asynchronous query to the GitHub API to report the status of continuous integration pipelines.
-**States**: `[PASS]`, `[FAIL]`, `[PEND]`, `[NONE]`.
-
-### `export` / `restore`
-Enables persistence and reconstruction of large-scale workspaces using JSON snapshot files. Useful for instant onboarding processes.
+real-time monitoring of github actions pipelines.
 
 ---
 
-## Global Flags and Parameters
+## global flags and parameters
 
-- `-d, --dir <path>`: Root directory for recursive scanning. Preserves the persistence of the last used path.
-- `-w, --workers <n>`: Number of concurrent threads (Limit: 50). Default: `5`.
-- `-l, --log <path>`: Redirection of technical output to a persistent log file.
-- `-b, --branch <name>`: Target branch for transition operations (`checkout`).
-- `--autostash`: Automates the safeguarding of local changes prior to an update.
-- `--dry-run`: Preview changes without real application (Supported in `clean` and `restore`).
-- `--gui`: Forces the launch of the graphical user interface.
-
----
-
-## Advanced Usage Scenarios
-
-### Synchronization with AutoStash
-To avoid blocks caused by uncommitted local changes during a bulk pull, the `--autostash` instruction allows for automatic stashing, updating, and re-applying of the work patch.
-```bash
-gitbulk pull --autostash
-```
-
-### Execution in CI Environments (Piped Execution)
-GitBulk has been designed following POSIX process standards. Interactive operations like `clean` automatically detect the absence of a terminal (`tty`) or null `stdin` injections, aborting execution safely to prevent catastrophic failures in automated pipelines.
+- `-d, --dir`: root directory (persists across sessions).
+- `-w, --workers`: concurrent threads. use `0` for automatic hardware tuning.
+- `--gui`: launches the native graphical interface.
+- `--dry-run`: preview of destructive operations.
