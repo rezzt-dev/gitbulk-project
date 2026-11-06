@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### CAMBIADO
 
 - completar las guías de gestión y el contexto específico del proyecto; conservar las reglas técnicas y verificar las rutas
+- corregir el ejemplo de promociones entre ramas para evitar destinos idénticos al origen
 - rehacer `AGENTS.md` con la estructura real, los comandos verificados y el resumen de las reglas de git
 
 ### ENGLISH
@@ -31,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### CHANGED
 
 - complete repository management guides and project-specific context; preserve technical rules and verify paths
+- correct the branch promotion example to avoid destinations identical to the source
 - rewrite `AGENTS.md` with the real structure, the verified commands and the git rules digest
 
 ---
