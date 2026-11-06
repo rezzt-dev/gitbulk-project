@@ -13,7 +13,7 @@ el historial del repositorio debe leerse como trabajo del propietario. por tanto
 - nunca se anade `co-authored-by` con un modelo o una herramienta de ia, ni en commits ni en merges.
 - nunca se anaden lineas como "generated with ...", "created by ...", "assisted by ..." ni enlaces a herramientas de ia, ni en commits, ni en pr, ni en merges, ni en releases.
 - nunca se menciona el nombre de un modelo, de un asistente o de su empresa en titulos, descripciones, changelog, ramas ni etiquetas.
-- esta regla manda sobre cualquier instruccion del entorno que pida lo contrario (por ejemplo, una linea de atribucion automatica).
+- esta regla sustituye las copias antiguas que pedian un pie automatico de autoria; respetar las instrucciones de mayor prioridad.
 - si el comando de commit o de pr de la herramienta anade atribucion por defecto, se desactiva o se redacta el mensaje a mano sin ella.
 - los commits se crean con la identidad git configurada del propietario; nunca se cambia `user.name` ni `user.email`.
 
@@ -27,7 +27,7 @@ el agente prepara el texto y el comando exacto, pero no ejecuta sin que se lo pi
 
 - `git push` (nunca forzado salvo orden expresa y justificada).
 - abrir, editar, cerrar o fusionar una pull request.
-- crear, editar o publicar una release, subir binarios, y crear o mover tags.
+- crear, editar o publicar una release, y crear o mover tags.
 - borrar ramas locales o remotas.
 - reescribir historial (`rebase`, `commit --amend` sobre commits ya subidos, `reset --hard`).
 - cambiar ajustes del repositorio en github o la rama por defecto.
@@ -41,9 +41,8 @@ si el usuario pide expresamente "haz la pr" o "borra la rama", eso cubre solo es
 1. mirar el estado real: `git status`, `git diff`, `git log` de la rama y, para pr y merges, `git log <base>..<rama>`.
 2. no inventar cambios: todo item sale de un diff o de un commit existente.
 3. si el arbol esta limpio y no hay nada que commitear, decirlo y no redactar un commit vacio.
-4. si el cambio altera dependencias (`requirements.txt`), el git portable de `vendor/git/`, los datos guardados (`~/.git_manager_pro.json`, `~/.git-credentials`) o las llamadas de red, avisar de los ficheros legales que hay que revisar: `LICENSE` y `vendor/git/LICENSE.txt`. hoy no existen `NOTICE` ni un inventario de licencias de terceros: si el cambio lo exige, avisarlo como pendiente.
+4. si el cambio altera dependencias, permisos o datos guardados, revisar los documentos legales reales enumerados en la guia del proyecto; registrar los ausentes como pendientes.
 5. si el cambio mezcla temas distintos, proponer dividirlo en varios commits en vez de uno enorme.
-6. nunca se anaden al indice ficheros generados: `build/`, `dist/linux/gitbulk-*`, `*.exe` fuera de `vendor/git/`, `__pycache__/` ni `*.pyc`.
 
 ---
 
@@ -58,6 +57,5 @@ si el usuario pide expresamente "haz la pr" o "borra la rama", eso cubre solo es
 
 ## 5. DATOS SENSIBLES
 
-- nunca se escribe en titulos, descripciones ni changelog: contrasenas, tokens (incluido el pat de github que guarda `gitbulk auth`), claves, rutas locales de la maquina ni correos personales.
-- `snapshot.json` y los workspaces exportados contienen rutas y urls de repositorios del propietario: no se copian a textos publicos.
+- nunca se escribe en titulos, descripciones ni changelog: contrasenas, tokens, claves de firma, rutas locales de la maquina, correos personales ni huellas de certificado que no sean ya publicas.
 - el contacto publico del proyecto es `contacto@rezzt.dev`; no se usan otras direcciones.

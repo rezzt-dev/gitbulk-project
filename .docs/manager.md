@@ -7,7 +7,7 @@
 > antes que cualquier otra guia. todas las guias que cita (`agent-rules.md`,
 > `commit-guide.md`, `pr-merge-guide.md`, `release-guide.md`,
 > `changelog-guide.md`, `branching-guide.md` e `index.md`) estan en
-> `.docs/-github-guides/`. `.docs/` esta versionado en este repositorio.
+> `.docs/-github-guides/`.
 
 ---
 
@@ -33,13 +33,13 @@ las frases son ejemplos; vale cualquier peticion equivalente en castellano o ing
 | texto de commit | "sacame el titulo y la descripcion del commit", "que pongo en el commit" | `commit-guide`, `changelog-guide` | `git status`, `git diff`, `git diff --cached`, `git log -5 --oneline` | titulo, descripcion, fragmento de changelog |
 | crear commit | "haz el commit", "commitea esto" | `commit-guide`, `changelog-guide` | los mismos | texto + commit ejecutado |
 | actualizar changelog | "actualiza el changelog", "anade esto al changelog" | `changelog-guide` | `git diff`, lectura de `CHANGELOG.md` | fragmento aplicado en `## SIN PUBLICAR / UNRELEASED` |
-| texto de pr | "titulo y descripcion de la pr", "merge request de x a main" | `pr-merge-guide`, `branching-guide` | `git log main..<rama>`, `git diff main...<rama> --stat` | titulo y descripcion resumida |
+| texto de pr | "titulo y descripcion de la pr", "merge request de x a y" | `pr-merge-guide`, `branching-guide` | `git log <base>..<rama>`, `git diff <base>...<rama> --stat` | titulo y descripcion resumida |
 | abrir pr | "haz la pr", "abre la pr" | `pr-merge-guide`, `branching-guide`, `agent-rules` | los de arriba, `gh auth status`, `gh pr list` | texto + pr abierta + enlace |
 | texto de merge | "titulo y descripcion para el merge", "para fusionar" | `pr-merge-guide` | `gh pr view <n>` | titulo y descripcion de la pr, sin cambios |
 | fusionar | "fusiona la pr", "haz el merge" | `pr-merge-guide`, `agent-rules` | `gh pr view <n>`, `gh pr checks <n>` | `gh pr merge <n> --merge` ejecutado |
-| texto de release | "titulo y descripcion de la release" | `release-guide`, `changelog-guide` | lectura del changelog cerrado, `git tag`, `gh release list` | titulo, descripcion en ingles, tag |
-| publicar release | "publica la release", "crea la release" | `release-guide`, `agent-rules` | `gh release list`, `gh pr view` de la pr de version, nombres de los binarios | tag y release creados con los cuatro binarios |
-| cerrar version | "cierra la version", "prepara la 1.5" | `changelog-guide`, `release-guide`, `branching-guide` | lectura del changelog, `grep -n 'VERSION\|version' dist/*/install_*`, `grep -n footer_version src/gui/translations.py` | commit `changes` de version, commit `changelog`, luego pr de version |
+| texto de release | "titulo y descripcion de la release" | `release-guide`, `changelog-guide` | lectura del changelog cerrado, `git tag` | titulo, descripcion en ingles, tag |
+| publicar release | "publica la release", "crea la release" | `release-guide`, `agent-rules` | `gh release list`, `gh pr view` de la pr de version | tag y release creados |
+| cerrar version | "cierra la version", "prepara la 1.5" | `changelog-guide`, `release-guide`, `branching-guide` | lectura del changelog, `requirements.txt` | commit `changelog`, luego pr de version |
 | ramas | "a que rama va esto", "nombre de la rama", "borra la rama" | `branching-guide` | `git branch -a`, `git log <origen>..<destino>` | rama base y comandos |
 | revisar estado | "esta todo listo para fusionar", "que falta" | `branching-guide`, `pr-merge-guide` | `gh pr view`, `git log`, `git status` | lista de lo que falta |
 
@@ -55,7 +55,6 @@ para no hacer preguntas innecesarias, estas decisiones ya estan tomadas:
 - **longitud:** descripciones de pr y merge siempre sintetizadas (limites de `pr-merge-guide.md`, seccion 2). si el usuario pide "resumida" o "muy sintetizada", se usa el limite inferior.
 - **tipo de merge:** siempre "create a merge commit".
 - **prefijo de commit:** `update` si no hay un motivo claro para otro.
-- **rama base:** `main`, siempre; es la unica rama permanente.
 - **rama actual:** la peticion habla de la rama en la que esta el repositorio (`git branch --show-current`) salvo que nombre otra.
 - **entrega de texto:** si el usuario pide "titulo y descripcion", solo se entregan los bloques, sin ejecutar nada.
 
@@ -65,7 +64,7 @@ para no hacer preguntas innecesarias, estas decisiones ya estan tomadas:
 
 solo se pregunta cuando la respuesta cambia lo que se hace y no hay default:
 
-- si el trabajo esta commiteado directamente en `main` sin rama de trabajo: si se mueve a una rama nueva antes de subirlo o se sube tal cual.
+- la rama base de una pr cuando la rama de origen no encaja en `branching-guide.md` (por ejemplo, una rama `changes/*` sin `main` activa).
 - el numero y el resumen de una version nueva que aun no esta en el changelog.
 - si hay dos cambios no relacionados en el arbol y no se puede decidir si van en un commit o en dos.
 
@@ -84,9 +83,9 @@ el verbo de la peticion decide si se ejecuta algo:
 | "haz la pr" | `git push -u origin <rama>` (si no esta subida) y `gh pr create` | merge |
 | "fusiona" | `gh pr merge <n> --merge` | borrar la rama |
 | "borra la rama" | borrado local y remoto de **esa** rama | borrar otras |
-| "publica la release" | tag, `gh release create` y subida de los binarios | modificar el changelog |
+| "publica la release" | tag y `gh release create` | modificar el changelog |
 
-los permisos no se heredan: una orden anterior ("haz la pr") no autoriza la siguiente ("fusiona") ni vale para otra rama.
+la autorizacion se mantiene durante toda la tarea solicitada. abrir una pr incluye subir esa rama, pero no autoriza fusionarla ni publicar releases. no volver a pedir permiso para pasos ya solicitados.
 
 ---
 
@@ -98,27 +97,7 @@ los permisos no se heredan: una orden anterior ("haz la pr") no autoriza la sigu
 4. si se ejecuto una accion, el enlace o el hash resultante.
 5. sin atribucion, firmas ni pies de pagina.
 
-ejemplo de respuesta a "titulo y descripcion de la pr de changes/release-1.5.0 a main":
-
-```
-changes/release-1.5.0 → main, 6 commits, sin conflictos.
-```
-
-```
-release version 1.5.0 - <resumen>
-```
-
-```
-### CASTELLANO
-
-#### ANADIDO
-- <item>
-
-### ENGLISH
-
-#### ADDED
-- <item>
-```
+ejemplo de entrega: indicar la rama origen y destino, presentar titulo y descripcion en bloques separados y devolver el enlace si se abrio la pr.
 
 ---
 
@@ -144,11 +123,12 @@ cuando una peticion junta varias acciones, se ejecutan en este orden y cada una 
 3. push de la rama.
 4. abrir la pr.
 5. fusionar la pr.
-6. cambiar a `main` y traer los cambios (`git checkout main`, `git pull --ff-only`).
+6. cambiar a la rama destino y traer los cambios (`git checkout <destino>`, `git pull --ff-only`).
 7. borrar la rama de trabajo.
-8. tag, binarios y release.
+8. preparar la siguiente promocion solo si el flujo real del proyecto la requiere y el usuario la ha solicitado.
+9. tag y release.
 
-si un paso falla (conflictos, pruebas nuevas en rojo, pr no fusionable, un binario que falta), se detiene la cadena, se explica el motivo y no se intenta saltarlo ni forzarlo.
+si un paso falla (conflictos, `available local checks` en rojo, pr no fusionable), se detiene la cadena, se explica el motivo y no se intenta saltarlo ni forzarlo.
 
 ---
 
@@ -159,8 +139,6 @@ si un paso falla (conflictos, pruebas nuevas en rojo, pr no fusionable, un binar
 - usar squash o rebase al fusionar.
 - olvidar la paridad castellano / ingles o las categorias en su orden.
 - copiar a la release el bloque en castellano; la release es solo en ingles.
-- subir `VERSION` en los instaladores de `main` sin que exista la release con los cuatro binarios.
-- anadir al commit `build/`, binarios de `dist/linux/`, `__pycache__/` o `*.pyc`.
 - dejar la rama de trabajo viva despues de fusionarla (si el usuario pidio borrarla).
 - ejecutar `git push --force`, mover tags o reescribir historial sin orden expresa.
 - anadir cualquier linea que delate la intervencion de una ia.

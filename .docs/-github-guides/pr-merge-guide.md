@@ -16,6 +16,7 @@ changelog, no el changelog entero. el detalle completo vive en
 - la fuente es siempre `CHANGELOG.md` (seccion `## SIN PUBLICAR / UNRELEASED` o version ya cerrada) y el diff real de la rama.
 - minusculas y sin acentos; los encabezados en mayusculas.
 - categorias cerradas y en este orden: `ANADIDO`, `CAMBIADO`, `CORREGIDO`, `ELIMINADO`, `SEGURIDAD` (en ingles `ADDED`, `CHANGED`, `FIXED`, `REMOVED`, `SECURITY`). se omite la que no tenga items.
+- los marcadores `[online]` / `[offline]` del changelog se conservan tal cual.
 - sin lineas de atribucion ni pies de pagina (ver `agent-rules.md`).
 
 ---
@@ -27,7 +28,7 @@ changelog, no el changelog entero. el detalle completo vive en
 | pr de trabajo normal | 1 a 3 | 110 caracteres |
 | pr / merge de version | 2 a 5 | 130 caracteres |
 
-- cada item agrupa varios cambios relacionados en una sola linea ("anadir los workspaces persistentes con sincronizacion"), nunca uno por fichero.
+- cada item agrupa varios cambios relacionados en una sola linea ("completar las guias y el contexto del proyecto"), nunca uno por fichero.
 - se nombran como mucho 2 identificadores por item; el resto se omite.
 - los dos idiomas llevan los mismos items en el mismo orden (paridad exacta).
 
@@ -37,7 +38,7 @@ changelog, no el changelog entero. el detalle completo vive en
 
 ### pr de trabajo normal
 
-rama `feature/...`, `fix/...`, `changes/...` o `hotfix/...` hacia `main`. mismo formato que un commit (ver `commit-guide.md`):
+rama `feature/...`, `fix/...`, `changes/...` o similar hacia `main` u otra rama de trabajo. mismo formato que un commit (ver `commit-guide.md`):
 
 ```
 <prefijo> | <resumen corto en imperativo>
@@ -47,7 +48,7 @@ si la pr agrupa varios commits, el resumen describe el conjunto.
 
 ### pr de version
 
-la pr hacia `main` que trae el commit `changelog` que cierra la version (ver `changelog-guide.md`, seccion 5):
+solo cuando la pr cierra expresamente una version; el destino por si solo no convierte una pr de trabajo en una pr de version:
 
 ```
 release version <x.y.z> - <resumen de las 2-3 entradas mas relevantes>
@@ -56,8 +57,10 @@ release version <x.y.z> - <resumen de las 2-3 entradas mas relevantes>
 ejemplo:
 
 ```
-release version 1.5.0 - comando update, configuracion por carpeta y dry-run ampliado
+release version <x.y.z> - <resumen de la version comprobada>
 ```
+
+el titulo de una pr de version es el mismo en `main` → `main` y en `main` → `main`.
 
 ---
 
@@ -77,34 +80,18 @@ plantilla:
 - <same change, one line>
 ```
 
-ejemplo de pr de version, ya sintetizada:
+ejemplo de pr de trabajo:
 
-```
+```markdown
 ### CASTELLANO
 
-#### ANADIDO
-- anadir los workspaces persistentes con `save`, `load`, `list`, `delete` y `sync`
-- anadir los grupos logicos de repositorios con `.gitbulk.repo.json`
-
 #### CAMBIADO
-- ajustar el numero de hilos al hardware con `-w 0`
-- unificar la marca en la cli, la gui y la documentacion
-
-#### CORREGIDO
-- corregir la persistencia de la configuracion entre sesiones
+- unificar las instrucciones de gestion y el contexto del proyecto
 
 ### ENGLISH
 
-#### ADDED
-- add persistent workspaces with `save`, `load`, `list`, `delete` and `sync`
-- add logical repository groups through `.gitbulk.repo.json`
-
 #### CHANGED
-- tune the worker count to the hardware with `-w 0`
-- unify the branding across the cli, the gui and the documentation
-
-#### FIXED
-- fix configuration persistence between sessions
+- unify repository management instructions and project context
 ```
 
 si la pr solo aporta parte de `## SIN PUBLICAR / UNRELEASED`, la descripcion incluye solo esos items.
@@ -125,10 +112,10 @@ si la pr solo aporta parte de `## SIN PUBLICAR / UNRELEASED`, la descripcion inc
 1. una linea de contexto: rama origen, rama destino y numero de commits.
 2. bloque de codigo con el titulo.
 3. bloque de codigo con la descripcion.
-4. si la pr aun no existe y se pide abrirla, el comando exacto (ver abajo), sin ejecutarlo hasta que lo confirmen.
+4. si la pr aun no existe y se pide abrirla, ejecutar el comando autorizado y devolver su enlace; si solo se pide texto, entregar el comando sin ejecutarlo.
 
 ```
-gh pr create --base main --head <origen> --title "<titulo>" --body-file <fichero>
+gh pr create --base <destino> --head <origen> --title "<titulo>" --body-file <fichero>
 ```
 
 la descripcion se pasa con `--body-file` para evitar problemas de comillas y saltos de linea.

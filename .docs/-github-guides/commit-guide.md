@@ -16,7 +16,6 @@
 - separador fijo: espacio, barra vertical, espacio.
 - maximo 72 caracteres; sin punto final; todo en minusculas y sin acentos.
 - el resumen describe el conjunto del commit, no un fichero concreto.
-- un titulo que sea solo el prefijo (`update`, `fixed`) no vale: siempre lleva resumen.
 
 ### prefijos (cerrados, no se inventan otros)
 
@@ -24,8 +23,8 @@
 |---|---|
 | `update` | trabajo normal hacia adelante: anade o mejora funcionalidad, contenido o documentacion. es el prefijo por defecto |
 | `fix` | corrige un error detectado durante el desarrollo, sin urgencia de publicacion |
-| `hotfix` | corrige algo urgente que afecta a una version ya publicada (binarios o instaladores de `dist/`) o bloquea el trabajo |
-| `changes` | cambios estructurales o no funcionales: mover o renombrar ficheros, configuracion, `.spec` de pyinstaller, scripts de build, dependencias |
+| `hotfix` | corrige algo urgente que afecta a una version ya publicada o bloquea el trabajo |
+| `changes` | cambios estructurales o no funcionales: mover o renombrar ficheros, configuracion, tooling, dependencias |
 | `changelog` | el unico proposito del commit es editar `CHANGELOG.md` |
 
 si un commit mezcla un fix y una mejora, se divide en dos. si no es posible, gana el prefijo del cambio principal.
@@ -33,11 +32,11 @@ si un commit mezcla un fix y una mejora, se divide en dos. si no es posible, gan
 ### ejemplos
 
 ```
-update | anadir el comando workspace sync con archivado seguro
-fix | corregir el recuento de ramas cuando un repositorio no tiene remoto
-hotfix | corregir la url de descarga del instalador gui de linux
-changes | fijar las versiones de `requirements.txt` y ajustar los `.spec`
-changelog | cerrar la seccion de la version 1.5.0
+update | completar la documentacion del proyecto
+fix | corregir una referencia rota en la documentacion
+hotfix | corregir un fallo critico de la version publicada
+changes | reorganizar la documentacion del proyecto
+changelog | cerrar la seccion de la version 1.4.0
 ```
 
 ---
@@ -53,10 +52,9 @@ changelog | cerrar la seccion de la version 1.5.0
 
 ejemplo:
 
-```
-- anadir la accion `sync` a `workspace` para reconciliar el arbol con la referencia guardada
-- mover los repositorios sobrantes a `.gitbulk_archive/` en vez de borrarlos
-- mostrar la vista previa de la sincronizacion antes de confirmar en cli y gui
+```text
+- adaptar las guias de gestion a las rutas y ramas del proyecto
+- conservar las convenciones tecnicas y retirar instrucciones duplicadas
 ```
 
 ---
@@ -88,7 +86,7 @@ git add <ficheros>
 git commit -m "<titulo>" -m "<descripcion>"
 ```
 
-se anaden los ficheros por nombre, nunca `git add -A` a ciegas; se comprueba antes con `git status` que no entran ficheros ignorados, claves, `__pycache__/`, `build/` ni binarios de pyinstaller.
+se anaden los ficheros por nombre, nunca `git add -A` a ciegas; se comprueba antes con `git status` que no entran ficheros ignorados, claves ni artefactos de compilacion.
 
 ---
 

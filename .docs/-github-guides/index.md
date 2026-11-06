@@ -3,8 +3,9 @@
 > conjunto de guias para gestionar el repositorio de forma profesional: commits,
 > pull requests, merges, releases, changelog y ramas. estan pensadas para que
 > cualquier agente de ia (o persona) devuelva titulos y descripciones listos
-> para copiar y pegar, sin trabajo extra. estas son las unicas guias vigentes
-> de git y github del proyecto. el punto de entrada es `.docs/manager.md`, un nivel por encima de esta carpeta.
+> para copiar y pegar, sin trabajo extra. las guias antiguas
+> (`commit-guidelines.md` y `pr-merge-release-guidelines.md`) ya no existen:
+> estas son las unicas vigentes. el punto de entrada es `.docs/manager.md`, un nivel por encima de esta carpeta.
 
 ---
 
@@ -16,7 +17,7 @@
 | `agent-rules.md` | reglas obligatorias para el agente: sin rastro de ia, acciones que exigen confirmacion, idioma y formato |
 | `commit-guide.md` | titulo y descripcion de cada commit |
 | `pr-merge-guide.md` | titulo y descripcion resumidos de pull requests y merges |
-| `release-guide.md` | titulo, descripcion, tag y binarios de las releases de github |
+| `release-guide.md` | titulo, descripcion y tag de las releases de github |
 | `changelog-guide.md` | como se escribe y se cierra `CHANGELOG.md` |
 | `branching-guide.md` | ramas, flujo de versiones y que rama es la base de cada pr |
 
