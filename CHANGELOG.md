@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - anadir `CLAUDE.md` con el resumen autocontenido de las reglas de git del proyecto
 
 #### CAMBIADO
+- exigir español de españa y conservar `ñ` y `Ñ`, incluso en formatos que pidan escribir sin acentos
 
 - completar las guías de gestión y el contexto específico del proyecto; conservar las reglas técnicas y verificar las rutas
 - corregir el ejemplo de promociones entre ramas para evitar destinos idénticos al origen
@@ -30,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - add `CLAUDE.md` with the self-contained digest of the project git rules
 
 #### CHANGED
+- require spanish from spain and preserve `ñ` and `Ñ`, including formats that omit vowel accents
 
 - complete repository management guides and project-specific context; preserve technical rules and verify paths
 - correct the branch promotion example to avoid destinations identical to the source
