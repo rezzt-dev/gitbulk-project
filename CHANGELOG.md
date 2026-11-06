@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## SIN PUBLICAR / UNRELEASED
+
+### CASTELLANO
+
+#### ANADIDO
+- anadir `.docs/manager.md` y las guias de `.docs/-github-guides/` para commits, pr, merges, releases, changelog y ramas
+- anadir `.docs/repo-audit-and-fix.md` con el contexto verificado del repositorio y el plan de auditoria
+- anadir `CLAUDE.md` con el resumen autocontenido de las reglas de git del proyecto
+
+#### CAMBIADO
+
+- completar las guías de gestión y el contexto específico del proyecto; conservar las reglas técnicas y verificar las rutas
+- corregir el ejemplo de promociones entre ramas para evitar destinos idénticos al origen
+- rehacer `AGENTS.md` con la estructura real, los comandos verificados y el resumen de las reglas de git
+
+### ENGLISH
+
+#### ADDED
+- add `.docs/manager.md` and the `.docs/-github-guides/` guides for commits, prs, merges, releases, changelog and branches
+- add `.docs/repo-audit-and-fix.md` with the verified repository context and the audit plan
+- add `CLAUDE.md` with the self-contained digest of the project git rules
+
+#### CHANGED
+
+- complete repository management guides and project-specific context; preserve technical rules and verify paths
+- correct the branch promotion example to avoid destinations identical to the source
+- rewrite `AGENTS.md` with the real structure, the verified commands and the git rules digest
+
+---
+
 ## [Unreleased]
 
 ### Planned
